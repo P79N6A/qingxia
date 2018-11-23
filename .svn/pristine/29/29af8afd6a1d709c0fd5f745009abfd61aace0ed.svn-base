@@ -1,0 +1,593 @@
+<script type="text/javascript" src="http://192.168.0.112/jiajiaot/scripts/jquery.min.js"></script>
+<script>var DT_STATIC='http://192.168.0.112/jiajiaot/',DT_PIC='http://192.168.0.112/jiajiaot/',ISMOBILE=0;</script>
+
+    
+
+
+<div class='pc_main_box'>
+
+
+<div class='left_box'>
+
+	<div class="floatbox" id="floatbox_add">
+<div class="tit">&nbsp;&nbsp;小提示：可按Esc键关闭窗口<i class="close">关闭</i></div>
+<form onSubmit="gettimulist('','');return false;">
+	<input type="text" name="txtword" value="" placeholder="搜索题目" id='txtword' style='width:260px;height:30px; margin-left:8px;'>
+	<input type="submit" class='form-button' value='搜索 '>
+    <a href="javascript:void(0)" onClick="changeWH(2);">-变窄</a>
+    <a href="javascript:void(0)" onClick="changeWH(1);">+变宽</a>
+    <a href="javascript:void(0)" onClick="changeWH(4);">↓变矮</a>
+    <a href="javascript:void(0)" onClick="changeWH(3);">↑变高</a>
+    <a href="javascript:void(0)" onClick="autoCompose();">自动排版</a>
+</form>
+	<div class="cont">
+	
+	<div id="txtbox"></div>
+	
+	<script type="text/plain" id="E_add1" name='question' style="width:700px;height:150px;">
+    <p>这里输入题目</p>
+	</script>
+
+	
+	<a href="javascript:void(0)" onClick="addtoWorkbook('1','luru');" class="daan">添加题目</a>
+	</div>
+</div>
+	
+
+	
+	
+	</div>
+		
+
+
+	
+</div>
+<a href="#" onClick="init_ue();" id="initUE">csasds</a>
+
+<script type="text/javascript">
+
+	var bookid='2281';
+	var chapterid='1111';
+	var editbar3=$("#editbar3").html();
+	
+	var uid=1;
+	var ue1;
+	var loadcount=0;
+function init_ue()
+{
+	 if(typeof(UE)=="undefined"){
+	 	$.getScript("http://192.168.0.112/jiajiaot/scripts/ueditor/ueditor.config.js");
+		$.getScript("http://192.168.0.112/jiajiaot/scripts/ueditor/ueditor.all.min.js",function(){
+			var toolbar={
+			toolbars: [[
+			   'source', '|','undo','redo',
+				'bold', 'italic', 'underline','subscript','superscript', '|', 'forecolor','fontfamily','fontsize','insertimage', '|', 'inserttable','preview', 'spechars','snapscreen','insertorderedlist','insertunorderedlist'
+			]],
+		};
+			
+		ue1=UE.getEditor('E_add1', toolbar);
+		});
+		$.getScript("http://192.168.0.112/jiajiaot/scripts/ueditor/kityformula-plugin/addKityFormulaDialog.js");
+		$.getScript("http://192.168.0.112/jiajiaot/scripts/ueditor/kityformula-plugin/getKfContent.js");
+		$.get("http://192.168.0.112/jiajiaot/scripts/ueditor/kityformula-plugin/defaultFilterFix.js");
+	 }
+}	
+
+var request_url=DT_STATIC+"ajax/zujuan.php";
+	
+function is_tag_closed(str){//检查标签是否闭合
+	var arrTags=["span","font","b","u","i","h1","h2","h3","h4","h5","h6","em","strong","p","li","ul","table","tr","td","div","tbody"]; 
+	for(var i=0;i<arrTags.length;i++){ 
+		var intOpen=0; 
+		var intClose=0; 
+		var re=new RegExp("<"+arrTags[i]+"( [^<>]*|)>","ig");  
+		var arrMatch=str.match(re); 
+		if(arrMatch!=null) intOpen=arrMatch.length; 
+		re=new RegExp("</"+arrTags[i]+">","ig");
+		arrMatch=str.match(re); 
+		if(arrMatch!=null) intClose=arrMatch.length; 
+		if(intOpen!=intClose){alert(arrTags[i]+'标签不匹配');return false;}
+	} 
+	return true;
+}
+
+function find_not_close_tag(str){//查找未闭合标签，记录数量返回
+	var arrTags=["span","font","b","u","i","h1","h2","h3","h4","h5","h6","em","strong","p","li","ul","td","tr","tbody","table","div"]; 
+	var ret=[];
+	for(var i=0;i<arrTags.length;i++){ 
+		var intOpen=0; 
+		var intClose=0; 
+		var re=new RegExp("<"+arrTags[i]+"( [^<>]*|)>","ig"); 
+		var arrMatch=str.match(re); 
+		if(arrMatch!=null) intOpen=arrMatch.length; 
+		re=new RegExp("</"+arrTags[i]+">","ig");
+		arrMatch=str.match(re); 
+		if(arrMatch!=null) intClose=arrMatch.length; 
+		
+		var tn=intOpen-intClose;
+		if(tn<0){alert("代码异常");return;}
+		else if(tn>0){
+			ret[i]={};
+			ret[i].n=tn;
+			ret[i].tag=arrTags[i];
+		}
+	} 
+	return ret;
+}
+
+	function changeWH(type)
+	{
+		var fd=50;//变化幅度
+		var fra=$(".edui-editor-iframeholder.edui-default");
+		if(type==1)
+		{
+			var newW=fra.width()+fd;
+			fra.width(newW);
+			fra.parent().width(newW);
+			fra.parent().parent().width(newW);
+		}
+		else if(type==2)
+		{
+			var newW=fra.width()-fd;
+			fra.width(newW);
+			fra.parent().width(newW);
+			fra.parent().parent().width(newW);
+		}
+		else if(type==3)
+		{
+			var newH=fra.height()+fd;
+			fra.height(newH);
+			var newcontH=$(".cont").height()+fd*2;
+			$(".cont").height(newcontH);
+		}
+		else if(type==4)
+		{
+			var newH=fra.height()-fd;
+			fra.height(newH);
+			var newcontH=$(".cont").height()-fd*2;
+			$(".cont").height(newcontH);
+		}
+	}
+
+	function del_nousetag(str)
+	{
+		str=str.replace(/<span[^>]+underline[^>]*>([^<]*)<\/span>/ig,"<u>$1</u>");
+		
+		var rp=new RegExp("</*(span|font|a|st1)[^<>]*>","ig");
+		str=str.replace(rp,"");
+		
+		str=str.replace(/white-space: normal;\s*|text-align: justify;\s*|font-family:[^;]+;\s*| style=""|<p><\/p>/ig,"");//删除不需要代码
+		
+		str=str.replace(/<u>([^<]*)<\/u>/ig,"<span style=\"text-decoration: underline;\">$1</span>");//替换回来解决编辑器不能识别下划线的问题
+		return str;
+	}
+
+function addbyue(uobj,type)
+{
+	uobj.ready(function(){
+		//$(document.getElementById('ueditor_0').contentWindow.document).click(function(e){
+		if(type=='addque') var fr_add1=frames['ueditor_0'].contentWindow;
+		else if(type=='addans') var fr_add1=frames['ueditor_1'].contentWindow;
+		var fen='||||||||||';
+		uobj.addListener( 'click', function (){
+			if(fr_add1.event.ctrlKey)
+			{
+				var htm8=$(fr_add1.document.body).html();//没修改的原始代码
+				uobj.execCommand("inserthtml",fen);
+				var htm=$(fr_add1.document.body).html();
+				var fpos=htm.indexOf(fen);
+				var qie=htm.substr(0,fpos);
+				//$(fr_add1.document).find(".fenge:eq(0)").remove();
+				var ret=find_not_close_tag(qie);
+				var addclose='',addopen='';
+				if(ret.length>0)//如果有未闭合的标签自动补上
+				{
+					for(var i in ret)
+					{
+						for(i2=0;i2<ret[i].n;i2++)
+						{
+							addclose+="</"+ret[i].tag+">";
+						}
+					}
+					ret.reverse();
+					for(var i in ret)
+					{
+						for(i2=0;i2<ret[i].n;i2++)
+						{
+							addopen+="<"+ret[i].tag+">";
+						}
+					}
+					qie+=addclose;
+				}
+				
+				qie=del_nousetag(qie);
+				if(is_tag_closed(qie))
+				{
+					uobj.setContent(addopen+htm.substr(fpos+fen.length));
+					if(type=='addque'){addque(qie);}
+					else if(type=='addans'){addans(qie);}
+				}
+				else uobj.setContent(htm8);
+			}
+		});
+	});	
+}
+
+$(function(){
+	//addbyue(ue1,'addque');
+//	addbyue(ue2,'addans');
+});
+	
+	function addque(ti_que)
+	{
+		var timuid=uid;
+		if($(".inorder").length>0) var orderid=parseInt($(".inorder:last").val())+1;
+		else var orderid=1;
+		var order_input='序号：<input type="text" class="inorder" value="'+orderid+'" />';
+		
+		var t_count=$("#timu_box .xiti").length+1;
+		
+		timuid=timuid+"_"+Math.round(new Date().getTime()/10);
+			var ti_ans='';
+			var ti_pre='<div class="xiti" id="m_'+timuid+'" uid="'+uid+'">'+order_input+'<div class="xtq"><div>';
+			var ti_next='</div></div></div>';
+			var request_pars = "type=addtoWorkbook&timuid="+timuid+"&bookid="+bookid+"&chapterid="+chapterid+"&t_count="+t_count+"&orderid="+orderid;
+			$.post(request_url+"?"+request_pars , {question:ti_que,answer:ti_ans} , function(data){
+				 if(data==1)
+				{
+					var ti_html=ti_pre+'<div class="que">'+ti_que+'</div><div class="ans">'+ti_ans+'</div>'+ti_next;
+					$("#timu_box").append(ti_html);
+					//bindzhankai();
+					auto_timubar();
+					 var h = $(document).height()-$(window).height();
+					 $(document).scrollTop(h);
+				 }
+				 else alert("添加失败");
+			});
+	}
+	
+	function addans(str)
+	{
+		$(".xiti").each(function(){
+			if(!$(this).attr("added"))
+			{
+				var timuid=$(this).attr("id").substr(2);
+				$(this).attr("added",1);
+				$(document).scrollTop($(this).offset().top);
+				$(this).children(".xtq").children().children(".ans").html(str);
+				var request_pars="type=add_ans&timuid="+timuid+"&chapterid="+chapterid;
+				$.post(request_url+"?"+request_pars , {answer:str} , function(data){
+					if(data==1){}
+					else alert("答案保存失败");
+				});
+				return false;
+			}
+		});
+	}
+	
+	function set_ans_added()
+	{
+		var num=parseInt($("#ans_added").val());
+		
+		$(".inorder").each(function(){
+			if($(this).val()<=num) $(this).parent().parent().attr("added",1);
+		});
+	}
+
+	function popWin(a)
+	{
+		function n(){var a=k?k:document.body,b=a.scrollHeight>a.clientHeight?a.scrollHeight:a.clientHeight,c=a.scrollWidth>a.clientWidth?a.scrollWidth:a.clientWidth;$("#maskLayer").css({height:b,width:c})}
+		var d,e,b=800,c=!1,f=$("#"+a),g=f.width(),h=f.height(),i=f.find(".tit"),j=f.find(".close"),k=document.documentElement,l=($(document).width()-f.width())/2,m=(k.clientHeight-f.height())/2;
+		f.css({left:l,top:m,display:"block","z-index":b});
+		i.mousedown(function(a){c=!0,d=a.pageX-parseInt(f.css("left")),e=a.pageY-parseInt(f.css("top"))});
+		f.mouseup(function(){c=!1});
+		$(document).mousemove(function(a){if(c){var b=a.pageX-d;0>=b&&(b=0),b=Math.min(k.clientWidth-g,b)-5;var i=a.pageY-e;0>=i&&(i=0),i=Math.min(k.clientHeight-h,i)-5,f.css({top:i,left:b})}});
+		j.on("click",function(){t_close(a)});
+		//if($("#maskLayer").length===0) $('<div id="maskLayer"></div>').appendTo("body").css({background:"#000",opacity:".4",top:0,left:0,position:"absolute",zIndex:"500"});
+		n(),$(window).bind("resize",function(){n()}),$(document).keydown(function(key){27==key.keyCode&&(t_close(a))})
+	}
+
+	function t_edit(timuid)
+	{
+		var tbox=$("#m_"+timuid);
+		var t=$("#m_"+timuid+" .xtq>div");
+		var que=t.children(".que").html();
+		var ans=t.children(".ans").html();
+		//$("#E_edit1").html(que);
+		//$("#E_edit2").html(ans);
+		um1.ready(function(){um1.setContent(que);um2.setContent(ans);});
+		
+		$("#floatbox_edit").attr("timuid",timuid);
+		popWin('floatbox_edit');
+	}
+	
+	function get_timupic()
+	{
+		if($("[name='sel_page']").html().length==0)
+		{
+			var request_pars="type=get_timupic&bookid="+bookid;
+			$.get(request_url , request_pars , function(data){
+				var pics=eval("("+data+")");
+				if(pics.length==0){
+					alert('本书暂时还没有内容');
+					t_close('floatbox_timupic');
+					return;
+				}
+				var ops='';
+				for(var k in pics) ops+='<option value="'+pics[k].question+'">'+pics[k].text+'</option>';
+				$("#sel_page [name='sel_page']").html(ops);
+				$("#timupic").attr("src",DT_PIC+pics[0].question);
+			});
+		}
+		$("[name='sel_page']").change(function(){
+			$("#timupic").attr("src",DT_PIC+$(this).val());
+		});
+		
+		popWin('floatbox_timupic');
+	}
+	
+	function t_del(timuid)//删除题目
+	{
+		$("#m_"+timuid).hide();
+		var t_count=$("#timu_box .xiti").length-1;
+		var request_pars = "type=t_del&chapterid="+chapterid+"&timuid="+timuid+"&t_count="+t_count;
+		$.get(request_url , request_pars , function(data){
+			if(data==1)
+			{
+				$("#m_"+timuid).remove();
+			}
+			else{
+				alert("删除失败");
+				$("#m_"+timuid).show();
+			}
+		});
+	}
+	
+	function update_editable()//变更可编辑状态
+	{
+		if(confirm("确定后章节将不能再编辑")==false) return;
+		var request_pars = "type=update_editable&bookid="+bookid;
+		$.get(request_url , request_pars , function(data){
+			if(data==1)
+			{
+				alert('设置成功');
+				window.location="?bookid="+bookid+"&action=show";
+			}
+			else{
+				alert("操作失败");
+			}
+		});
+	}
+	
+	function t_complete()//章节题目编辑完成状态更新
+	{
+		var request_pars = "type=t_complete&bookid="+bookid+"&chapterid="+chapterid;
+		$.get(request_url , request_pars , function(data){
+			if(data==1)
+			{
+				alert('状态设置成功！');
+			}
+			else{
+				alert("操作失败");
+			}
+		});
+	}
+	
+	function t_save()//编辑时保存
+	{
+		var editbar_sc=$("#editbar2").html();
+		$("#editbar2").html(loading_msg("正在保存，请稍等"));
+		var timuid=$("#floatbox_edit").attr("timuid");
+		var orderid=$("#m_"+timuid+" .inorder").val();
+		var request_pars = "type=t_save&chapterid="+chapterid+"&timuid="+timuid+"&bookid="+bookid+"&orderid="+orderid;
+		um1.ready(function(){
+				var ti_que=um1.getContent();
+				var ti_ans=um2.getContent();
+			$.post(request_url+"?"+request_pars , {question:ti_que,answer:ti_ans} , function(data){
+			if(data==1)
+			{
+				$("#m_"+timuid+" .xtq>div>.que").html(ti_que);
+				$("#m_"+timuid+" .xtq>div>.ans").html(ti_ans);
+				//bindzhankai();
+				t_close('floatbox_edit');
+				$("#m_"+timuid+" .xth>span").remove();
+				$("#m_"+timuid).children(".bottom").html('<a href="javascript:void(0)" onclick="t_edit(\''+timuid+'\')">编辑</a>&nbsp;&nbsp;<a href="javascript:void(0)" onclick="t_del(\''+timuid+'\')">删除</a>');//编辑完后修改删除权限
+			}
+			else alert("保存失败");
+			$("#editbar2").html(editbar_sc);
+			});
+		});
+	}
+	
+	function t_close(boxid)//关闭编辑窗口
+	{
+		if(boxid=='floatbox_add')//如果是添加题目窗口 关闭时清除不需要的内容
+		{
+			$("#txtbox").text('');
+			ue1.ready(function(){ue1.setContent('');ue2.setContent('');});
+		}
+		$("#"+boxid).hide();
+		//if(!$(".floatbox").is(":visible")) $("#maskLayer").remove();//没有可见的窗口后移除透明遮罩层
+	}
+	
+	function t_hide(timuid)
+	{
+		$("#m_"+timuid).hide();
+		var qid=$("#m_"+timuid).attr("qid");
+		var request_pars = "type=t_hide&chapterid="+chapterid+"&qid="+qid;
+		$.get(request_url , request_pars , function(data){
+			if(data==1)
+			{
+				$("#m_"+timuid).remove();
+			}
+			else{
+				alert("隐藏失败");
+				$("#m_"+timuid).show();
+			}
+		});
+	}
+
+	function auto_timubar()
+	{
+		//if(is_teacher==='1'){}
+		
+			$(".xiti").each(function(){
+				if($(this).children(".bottom").length==0)
+				{
+					var timuid=$(this).attr("id").substr(2);
+					var edit_uid=$(this).attr("uid");
+				//	console.log('edit_uid:'+edit_uid+"=>"+uid);
+					var toolcon=edit_uid==uid?'<a href="javascript:void(0)" onclick="t_del(\''+timuid+'\')">删除</a>':'<font color="#E2E2E2">删除</font>&nbsp;&nbsp;<a href="javascript:void(0)" onclick="t_hide(\''+timuid+'\')">隐藏</a>';
+					var instr='<p class="bottom"><a href="javascript:void(0)" onclick="t_edit(\''+timuid+'\')">编辑</a>&nbsp;&nbsp;'+toolcon+'</p>';
+					$(this).append(instr);
+				}
+			});
+		
+	}
+	
+	function loading_msg(note)
+	{
+		return note+'... ...<img src="'+DT_STATIC+'images/loading.gif" />';
+	}
+	
+	function update_orderid()//更新题号
+	{
+		var n=$(".inorder").length;
+		if(n==0){alert('本章节还没有题目');return;}
+		$('#editbar3').html(loading_msg('正在更新，请稍等'));
+		var i=0;
+		$(".inorder").each(function(){
+			var timuid=$(this).parent().attr("id").substr(2);
+			var orderid=$(this).val();
+			$.ajax({url:request_url+"?type=update_orderid&timuid="+timuid+"&orderid="+orderid,type:"GET",success:function(data){
+					i++;
+					if(n==i){alert("更新完成！");location.reload();}
+				}
+			});
+		});
+	}
+	
+	function timu2pic()//生成课件
+	{
+		var qidstr='';
+		$(".kejian_sel").each(function(){
+			if($(this).attr("checked")=="checked"){
+				var qid=$(this).parent().parent().parent().attr("qid");
+				qidstr+=qidstr==''?qid:(","+qid);
+			}
+		});
+		if(qidstr==''){alert('请先将要生成课件的题目加入课件后再生成！');return;}
+		$('#editbar3').html(loading_msg('请勿关闭当前页面，正在生成课件'));
+		$.getScript("http://ck.1010jiajiao.com/ajax/jsonp.php?type=timu2pic&chapterid="+chapterid+"&qidstr="+qidstr+"&call=timu2pic_check");
+	}
+	
+	function timu2pic_check(data)
+	{
+		var status=data.substr(0,2);
+		
+		if(status=='s|')//课件生成成功
+		{
+			var roomid=data.substr(2);
+			alert("生成完毕，即将转入房间");
+			window.location="http://zhibo.1010jiajiao.com/tc/room.php?roomID="+roomid+"&account=1";
+			return;
+		}
+		else
+		{
+			if(data==5)
+			{
+				alert("请先发布本章节课程后才能生成课件哦！");
+			}
+			else alert("生成失败");
+			$('#editbar3').html(editbar3);
+		}
+	}
+	
+	function add_chapter_des()
+	{
+		var des=$("[name='chapter_des']").val();
+		var request_pars ="type=add_chapter_des&chapterid="+chapterid;
+		$.post(request_url+"?"+request_pars , {des:des} , function(data){
+			 if(data==1)
+			 {
+				alert("更新成功！");
+			 }
+			 else alert("添加失败");
+		});
+	}
+	
+	function addtoWorkbook(timuid,from)//from 来自题库还是手动录入
+	{
+		//var scro=$(document).height()+1000;alert(scro);$(document).scrollTop(scro);
+		/*$(document.getElementById('ueditor_0').contentWindow.document.body).keydown(function(key){
+			alert(key.keyCode);
+		});*/
+		if($(".inorder").length>0) var orderid=parseInt($(".inorder:last").val())+1;
+		else var orderid=1;
+		var order_input='序号：<input type="text" class="inorder" value="'+orderid+'" />';
+		
+		var t_count=$("#timu_box .xiti").length+1;
+		
+		if(from=='tiku')
+		{
+	   		var ti_que=$("#t_"+timuid+" .xtq>div>.que").html();
+			var ti_ans=$("#t_"+timuid+" .xtq>div>.ans").html();
+			var ti_pre='<div class="xiti" id="m_'+timuid+'" uid="'+uid+'">'+order_input+'<div class="xtq"><div>';
+			var ti_next='</div></div></div>';
+			var request_pars = "type=addtoWorkbook&timuid="+timuid+"&bookid="+bookid+"&chapterid="+chapterid+"&t_count="+t_count+"&orderid="+orderid;
+			$.post(request_url+"?"+request_pars , {question:ti_que,answer:ti_ans} , function(data){
+			 if(data==1)
+			 {
+				var ti_html=ti_pre+'<div class="que">'+ti_que+'</div><div class="ans">'+ti_ans+'</div>'+ti_next;
+				$("#timu_box").append(ti_html);
+				//bindzhankai();
+				auto_timubar();
+			 }
+			 else if(data==8) alert("该题目已经添加过了");
+			 else alert("添加失败");
+			});
+		}
+		else if(from=='luru')
+		{
+			timuid=timuid+"_"+Math.round(new Date().getTime()/1000);
+			//ue2.getKfContent(function(){
+			//ue1.getKfContent(function(){
+				
+				var ti_que=ue1.getContent();
+				var ti_ans=ue2.getContent();
+				var ti_pre='<div class="xiti" id="m_'+timuid+'" uid="'+uid+'">'+order_input+'<div class="xtq"><div>';
+				var ti_next='</div></div></div>';
+				var request_pars = "type=addtoWorkbook&timuid="+timuid+"&bookid="+bookid+"&chapterid="+chapterid+"&t_count="+t_count+"&orderid="+orderid;
+				$.post(request_url+"?"+request_pars , {question:ti_que,answer:ti_ans} , function(data){
+					 if(data==1)
+			 		{
+						ue1.setContent('');ue2.setContent('');
+						var ti_html=ti_pre+'<div class="que">'+ti_que+'</div><div class="ans">'+ti_ans+'</div>'+ti_next;
+						$("#timu_box").append(ti_html);
+						//bindzhankai();
+						auto_timubar();
+						 var h = $(document).height()-$(window).height();
+						 $(document).scrollTop(h);
+					 }
+					 else alert("添加失败");
+				});
+			//});
+			//});
+		}
+		else alert("miss para: from");
+		//t_close('floatbox_add');
+	}
+	
+	function gettimulist(gradeid,subjectid)
+	{
+		jQuery('#txtbox').html(loading_msg("正在搜索，请稍候"));
+	    var request_pars = "type=gettimulist&gradeid="+gradeid+"&subject=alls&word="+jQuery('#txtword').val();//请求参数
+		jQuery.get(request_url, request_pars, function(content){
+			jQuery('#txtbox').html(content);//+'<div style="clear:both;"></div>'
+			//bindzhankai();
+
+		});
+
+	}
+	
+</script>

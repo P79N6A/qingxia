@@ -1,0 +1,129 @@
+<?php
+
+namespace App\Http\Controllers\IsbnArrange;
+
+use controller\search;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\ATongjiHotbook29;
+use App\PreMWorkbookUser;
+use App\ASubsort;
+use App\AWorkbook1010Zjb;
+use App\AOnlybookZjb;
+use Auth;
+
+class IsbnArrangeController extends Controller
+{
+    public function isbn_list(){
+        $data=ATongjiHotbook29::where(['op_uid'=>0])
+            ->select('onlyid','onlyid_2','isbn','searchnum','bookname')
+            ->with('user_book:isbn')
+            ->orderBy('searchnum','desc')
+            ->paginate(20);
+        return view('IsbnArrange.isbn_list', compact('data'));
+    }
+
+    public function book_list($isbn=''){
+        $data=PreMWorkbookUser::where(['isbn'=>$isbn])
+            ->with('hotbook29:isbn,description,grade_id,subject_id,version_id,volume_id,sort,ssort_id,bookname')
+            ->with('hotbook29.has_ssort:sort_id,ssort_id,ssort_name')
+            ->first();
+        //dd($data);
+        return view('IsbnArrange.book_list',compact('data'));
+    }
+
+
+    public function get_ssort(Request $request){
+        $sort_id=intval($request->sort_id);
+        $re=ASubsort::where(['sort_id'=>$sort_id])->select('ssort_id','ssort_name')->get();
+        return return_json($re);
+    }
+
+    public function save_book(Request $request){
+        $isbn=$request->isbn;
+        $bookinfo=$request->bookinfo;
+        $re=AWorkbook1010Zjb::where([
+            'grade_id'=>$bookinfo['grade_id'],
+            'subject_id'=>$bookinfo['subject_id'],
+            'volumes_id'=>$bookinfo['volumes_id'],
+            'version_id'=>$bookinfo['version_id'],
+            'version_year'=>2018,
+            'sort'=>$bookinfo['sort_id'],
+            'ssort_id'=>$bookinfo['ssort_id']
+        ])->first(['id','isbn','cover']);
+        if(empty($re)){
+            $onlyid=sprintf('%05d%02d%02d%02d%02d',$bookinfo['sort_id'],$bookinfo['grade_id'],$bookinfo['subject_id'],$bookinfo['version_id'],$bookinfo['ssort_id']);
+
+            AWorkbook1010Zjb::create([
+                'bookname'=>trim($bookinfo['bookname']),
+                'newname'=>str_replace('2018年','',$bookinfo['bookname']),
+                'bookcode'=>md5($bookinfo['bookname']),
+                'isbn'=>$isbn,
+                'onlyid'=>$onlyid,
+                'cover'=>$bookinfo['cover'],
+                'grade_id'=>$bookinfo['grade_id'],
+                'subject_id'=>$bookinfo['subject_id'],
+                'volumes_id'=>$bookinfo['volumes_id'],
+                'version_id'=>$bookinfo['version_id'],
+                'version_year'=>2018,
+                'sort'=>$bookinfo['sort_id'],
+                'ssort_id'=>$bookinfo['ssort_id'],
+                'addtime'=>date('Y-m-d H:i:s'),
+                'grade_name'=>'',
+                'subject_name'=>'',
+                'volume_name'=>'',
+                'version_name'=>'',
+                'sort_name'=>'',
+                'content_status'=>1,
+                'status'=>14
+            ]);
+
+            $re2=AOnlybookZjb::where(['onlyid'=>$onlyid])->first(['cover','isbn']);
+            if(empty($re2)){
+                $bookname_only=preg_replace('#全一册上|全一册下|全一册|上册|下册|^20\d{2}年|201\d{1}#','',$bookinfo['bookname']);
+                AOnlybookZjb::create([
+                    'onlyid'=>$onlyid,
+                    'bookname'=>trim($bookname_only),
+                    'sort_id'=>$bookinfo['sort_id'],
+                    'grade_id'=>$bookinfo['grade_id'],
+                    'subject_id'=>$bookinfo['subject_id'],
+                    'version_id'=>$bookinfo['version_id'],
+                    'ssort_id'=>$bookinfo['ssort_id'],
+                    'version_year'=>2018,
+                    'cover'=>$bookinfo['cover'],
+                    'isbn'=>$isbn,
+                    'status'=>1
+                ]);
+            }else{
+                $up2=[];
+                $up2['isbn']=$this->combine_isbn($isbn,$re2['isbn']);
+                AOnlybookZjb::where(['onlyid'=>$onlyid])->update($up2);
+            }
+        }else{
+            $up=[];
+            $up['isbn']=$this->combine_isbn($isbn,$re['isbn']);
+            AOnlybookZjb::where(['id'=>$re['id']])->update($up);
+        }
+
+
+
+    }
+
+    public function end_edit(Request $request){
+        $isbn=$request->isbn;
+        ATongjiHotbook29::where(['isbn'=>$isbn])->update([
+            'op_uid'=>auth::id(),
+            'op_time'=>date('Y-m-d H:i:s')
+        ]);
+        $re=PreMWorkbookUser::where(['isbn'=>$isbn])->update(['status'=>4]);//标记已处理过的isbn
+        return return_json(['status'=>$re]);
+    }
+
+
+    public function combine_isbn($isbn,$isbn2){
+        $a=explode('|',$isbn);
+        $a2=explode('|',$isbn2);
+        return implode('|',array_filter(array_unique(array_merge($a,$a2))));
+    }
+
+}

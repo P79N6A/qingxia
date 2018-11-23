@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+		<title>投诉</title>
+		<link rel="stylesheet" href="css/weui.css" />
+		<link rel="stylesheet" href="css/jquery-weui.css" />
+		<link rel="stylesheet" type="text/css" href="css/example.css"/>
+		<link rel="stylesheet" href="css/zijin_teacher.css" />
+	</head>
+
+	<body>
+		<div class="weui_cells weui_cells_form zijin_cells_form">
+      <div class="weui_cell">
+        <div class="weui_cell_hd zijin_current"><label for="time" class="weui_label">时间<i class="current">过往</i></label></div>
+        <div class="weui_cell_bd weui_cell_primary">
+          <input class="weui_input" id="time" type="text" value="" readonly>
+        </div>
+      </div>
+    </div>
+      <div class="zijin_clelrt_boxs">
+    <div class="weui_cells">
+        <div class="weui_cell_hd zijin_weui_cell_hd">
+        	<div>34<p>采纳量<i> 27</i></p></div>
+        		<ul class="zijin_ul">
+        		<li class="accept"><em>237</em><p>解题量<i> 384</i></p></li>
+        		<li class="not_solved"><em>45</em><p>未解决</p></li>
+        		<li class="complaints"><em>3</em><p>投诉量</p></li>
+        	</ul>
+        </div>   
+    </div>
+    <div class="weui_tab zijin_weui_tab">
+			<div class="weui_navbar">
+				<a href="the_historical_data.html" class="weui_navbar_item">
+                全部
+				</a>
+				<a class="weui_navbar_item weui_bar_item_on">
+					
+					投诉	
+				</a>
+				<a class="weui_navbar_item">
+					未解决
+					
+				</a>
+				<a class="weui_navbar_item">
+					采纳
+				</a>
+			</div>
+			<div class="weui_tab_bd">
+
+			</div>
+		<!--占位-->
+		<div class="zhanwei">
+	     <img src="images/tousubili.png" alt="" />
+	     </div>
+	     <!--占位-->
+		<div class="weui_cells weui_cells_access zijin_clelrt">
+		<a href="title_details.html">	
+			<div class="weui_cell">
+				<div class="weui_cell_hd"><img src="images/touxiang.png" alt=""></div>
+				<div class="weui_cell_bd weui_cell_primary">
+					<p class="user_name">学生姓名</p>
+					<p class="time">2016.03.30 19:00</p>
+				</div>
+				<div class="weui_cell_biaoti">六年级 数学</div>
+				<div class="weui_cell_daanbudui">答案不对</div>
+				
+			</div>
+			<div class="topic">
+				<img src="images/tili.png" alt="" />
+			</div>
+			
+		</a>
+		</div>
+	
+		<div class="weui_cells weui_cells_access zijin_clelrt">
+		<a href="title_details.html">	
+			<div class="weui_cell">
+				<div class="weui_cell_hd"><img src="images/touxiang.png" alt=""></div>
+				<div class="weui_cell_bd weui_cell_primary">
+					<p class="user_name">学生姓名</p>
+					<p class="time">2016.03.30 19:00</p>
+				</div>
+				<div class="weui_cell_biaoti">六年级 数学</div>
+				<div class="weui_cell_daanbudui">答案不对</div>
+				
+			</div>
+			<div class="topic">
+				<img src="images/tili.png" alt="" />
+			</div>
+			
+		</a>
+		</div>
+        </div>
+		</div>
+		<script src="js/jquery-2.1.4.js" type="text/javascript" charset="utf-8"></script>
+		<script src="js/jquery-weui.js" type="text/javascript" charset="utf-8"></script>
+	    <script>
+      $("#time").datetimePicker();
+    </script>
+	</body>
+</html>

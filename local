@@ -1,0 +1,447 @@
+#!/usr/bin/env python
+# coding=UTF-8
+'''
+Uses SURF to match two images.
+Based on the sample code from opencv:
+  samples/python2/find_obj.py
+USAGE
+  find_obj.py <image1> <image2>
+'''
+import json
+import shutil
+import urllib
+
+import numpy
+import cv2
+import re
+import requests
+from PIL import Image
+from aip import AipOcr
+
+import sys
+import os
+
+###############################################################################
+# Image Matching
+###############################################################################
+from libmysql import MYSQL
+import pytesseract
+
+
+def match_images(img1, img2):
+    """Given two images, returns the matches"""
+    #    detector = cv2.xfeatures2d.SURF_create()
+    detector = cv2.xfeatures2d.SIFT_create()
+    kp1, desc1 = detector.detectAndCompute(img1, None)
+    kp2, desc2 = detector.detectAndCompute(img2, None)
+    # print 'img1 - %d features, img2 - %d features' % (len(kp1), len(kp2))
+
+    # FLANN parameters
+
+    #    FLANN_INDEX_KDTREE = 0
+    #    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    #    search_params = dict(checks=50)   # or pass empty dictionary
+
+    #    flann = cv2.FlannBasedMatcher(index_params,search_params)
+    #    matches = flann.knnMatch(desc1,desc2,k=2)
+
+
+
+    #    raw_matches = flann.knnMatch(desc1,desc2,k=2)
+
+    matcher = cv2.BFMatcher(cv2.NORM_L2)
+    matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2)  # 2
+    kp_pairs = filter_matches(kp1, kp2, matches)
+    return kp_pairs
+
+
+def filter_matches(kp1, kp2, matches, ratio=0.75):
+    mkp1, mkp2 = [], []
+    for m in matches:
+        if len(m) == 2 and m[0].distance < m[1].distance * ratio:
+            m = m[0]
+            mkp1.append(kp1[m.queryIdx])
+            mkp2.append(kp2[m.trainIdx])
+    kp_pairs = zip(mkp1, mkp2)
+    return kp_pairs
+
+
+###############################################################################
+# Match Diplaying
+###############################################################################
+
+def explore_match(win, img1, img2, img3, kp_pairs, status=None, H=None):
+    global corners1
+    if (len(kp_pairs) < 3):
+        print
+        win + '____is____not_match__'
+        return
+    h1, w1 = img1.shape[:2]
+    h2, w2 = img2.shape[:2]
+    vis = numpy.zeros((max(h1, h2), w1 + w2), numpy.uint8)
+    # vis[:h1, :w1] = img1
+    # vis[:h2, w1:w1+w2] = img2
+    vis = img2
+    vis = cv2.cvtColor(vis, cv2.COLOR_GRAY2BGR)
+
+    if H is not None:
+        # print H
+        corners = numpy.float32([[0, 0], [w1, 0], [w1, h1], [0, h1]])
+        #print cv2.perspectiveTransform(corners.reshape(1, -1, 2), H).reshape(-1, 2)
+
+        # corners = numpy.int32( cv2.perspectiveTransform(corners.reshape(1, -1, 2), H).reshape(-1, 2) + (w1, 0) )
+        corners = numpy.int32(cv2.perspectiveTransform(corners.reshape(1, -1, 2), H).reshape(-1, 2))
+        # print img3
+        #exit(0)
+        pts11 = numpy.float32(corners)
+        pts12 = numpy.float32([[0, 0], [h2, 0], [0, w2], [h2, w2]])
+
+
+
+        M = cv2.getPerspectiveTransform(pts11, pts12)
+        #print M
+        dst = cv2.warpPerspective(img2, M, (w2, h2))
+
+        # vis[corners] = img3[[0,0],[248,0],[0,242],[248,242]]
+        #cv2.imwrite('./asd/' + win, dst)
+        p = cv2.arcLength(corners, True)
+        approx = cv2.approxPolyDP(corners, 0.1 * p, True)
+
+        if len(approx) != 4:
+            return
+        (x, y, w, h) = cv2.boundingRect(approx)
+        ar = w / float(h)
+        # shape = "square" if ar >= 0.85 and ar <= 1.15 else "rectangle"
+        # if (shape != 'square'):
+        #     return
+        dist1 = numpy.linalg.norm(approx[0] - approx[1])
+        dist2 = numpy.linalg.norm(approx[1] - approx[2])
+        dist3 = numpy.linalg.norm(approx[2] - approx[3])
+        dist4 = numpy.linalg.norm(approx[3] - approx[0])
+
+        if (dist1 > 300 or dist2 > 300 or dist3 > 300 or dist4 > 300):
+            return
+
+        min_x = corners.min(0)[0]
+        min_y = corners.min(0)[1]
+        max_y = corners.max(0)[1]
+
+
+        corners1 = numpy.array([[min_x,min_y-10],[w2,min_y-10],[w2,max_y+10],[min_x,max_y+10]],dtype = numpy.int32)
+
+        #cv2.imwrite('./asd2/' + win,vis[corners1])
+        #return
+        #print corners.min(0)
+        #print corners.min(1)
+        #return
+        #cv2.polylines(vis, [corners], True, (255, 0, 0),1)
+        #cv2.imshow(win, vis)
+        #exit(0)
+
+        #cv2.fillPoly(vis, [corners], (255, 255, 255))
+        # vis[corners] = img3
+
+    if status is None:
+        status = numpy.ones(len(kp_pairs), numpy.bool_)
+    p1 = numpy.int32([kpp[0].pt for kpp in kp_pairs])
+    p2 = numpy.int32([kpp[1].pt for kpp in kp_pairs]) + (w1, 0)
+
+    green = (0, 255, 0)
+    red = (0, 0, 255)
+    white = (255, 255, 255)
+    kp_color = (51, 103, 236)
+    #    for (x1, y1), (x2, y2), inlier in zip(p1, p2, status):
+    #        if inlier:
+    #            col = green
+    #            cv2.circle(vis, (x1, y1), 2, col, -1)
+    #            cv2.circle(vis, (x2, y2), 2, col, -1)
+    #        else:
+    #            col = red
+    #            r = 2
+    #            thickness = 3
+    #            cv2.line(vis, (x1-r, y1-r), (x1+r, y1+r), col, thickness)
+    #            cv2.line(vis, (x1-r, y1+r), (x1+r, y1-r), col, thickness)
+    #            cv2.line(vis, (x2-r, y2-r), (x2+r, y2+r), col, thickness)
+    #            cv2.line(vis, (x2-r, y2+r), (x2+r, y2-r), col, thickness)
+    #    vis0 = vis.copy()
+    count_i = 0
+    for (x1, y1), (x2, y2), inlier in zip(p1, p2, status):
+        if inlier:
+            count_i = count_i + 1
+            #cv2.line(vis, (x1, y1), (x2, y2), green)
+            #return 0
+    if (count_i > 10):
+        print win + '____is____done__'
+        (x, y, w, h) = cv2.boundingRect(corners1)
+        cv2.imwrite('./cut/' + win, vis[y:y + h, x:x + w])
+        #cv2.imwrite('./cut/' + win, vis)
+    else:
+        return
+
+
+def draw_matches(window_name, kp_pairs, img1, img2, img3):
+    """Draws the matches for """
+    mkp1, mkp2 = zip(*kp_pairs)
+
+    p1 = numpy.float32([kp.pt for kp in mkp1])
+    p2 = numpy.float32([kp.pt for kp in mkp2])
+
+    if len(kp_pairs) >= 4:
+        H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
+        # print '%d / %d  inliers/matched' % (numpy.sum(status), len(status))
+    else:
+        H, status = None, None
+        # print '%d matches found, not enough for homography estimation' % len(p1)
+
+    if len(p1):
+        explore_match(window_name, img1, img2, img3, kp_pairs, status, H)
+
+
+
+
+def get_file_content(filePath):
+    with open(filePath, 'rb') as fp:
+        return fp.read()
+
+def url_to_image(id,url):
+
+    # if int(id)>10000000:
+    #     if os.path.isfile('./cip/' + id + '_' + os.path.basename(url)):
+    #         pass
+    #     else:
+    #         shutil.copyfile('./u_covers2/'+url,'./cip/' + id + '_' + os.path.basename(url))
+    #     return id + '_' + os.path.basename(url)
+
+    print url
+    cip_index = url.find('|')
+    print cip_index
+    if cip_index != -1:
+        url = url.split('|')[0]
+
+    url = 'http://image.hdzuoye.com/'+url
+    print url+'____11111'
+    if os.path.isfile('./cip/'+id+'_'+os.path.basename(url)):
+        return id + '_' + os.path.basename(url)
+    ir = requests.get(url, stream=True)
+    if ir.status_code == 200:
+        with open('./cip/'+id+'_'+os.path.basename(url), 'wb') as f:
+            for chunk in ir:
+                f.write(chunk)
+    return id+'_'+os.path.basename(url)
+
+def check_isbn(isbn):
+    isbn_length = len(isbn)
+    if isbn_length == 13:
+        if isbn[0:3] != '978':
+            return 0
+        isbn_last = 0
+        for i in range(0,12):
+            if (i + 1) % 2 == 0:
+                isbn_last += int(isbn[i]) * 3
+            else:
+                isbn_last += int(isbn[i])
+        isbn_last = 10 - isbn_last % 10
+        if isbn_last == 10:
+            isbn_last=0
+        if isbn_last == int(isbn[-1:]):
+            return 1
+        else:
+            return 0
+    else:
+        return 0
+
+def remove_unicode(isbn):
+    u_code_index = isbn.find('\\u')
+    if u_code_index != -1:
+        isbn = isbn[0:u_code_index] + isbn[u_code_index + 6:]
+        remove_unicode(isbn)
+    else:
+        return isbn
+
+def find_isbn(line):
+    if len(line) >= 13:
+        isbn_index = line.find('978')
+        if isbn_index != -1:
+            real_isbn = line[isbn_index:]
+            real_isbn = real_isbn.replace('-', '')
+            real_isbn = remove_unicode(real_isbn)
+            real_isbn = re.sub("\D", "", real_isbn)
+            real_isbn = real_isbn[0:13]
+            if real_isbn.isdigit() and check_isbn(real_isbn) == 1:
+                print real_isbn
+                return real_isbn
+    return 0
+
+def baidu_ocr(img_file,img_type):
+    now_id = os.path.basename(img_file).split('_')[0]
+    now_pic_id = os.path.basename(img_file).split('_')[1]
+    has_ocr_id = db_conn.query("select words_result,words_result_num from cip_ocr_log where pic_id='"+now_pic_id+"' and pic_type='"+img_type+"'")
+    #has_ocr_id = db_conn.query("select count(*) as num from a_workbook_1010 where id="+now_id+" and isbn != ''")
+    if len(has_ocr_id)>0:
+        for words in has_ocr_id:
+            if words['words_result_num']>=1:
+                words_now = json.loads(words['words_result'])
+                line_num=0
+                for word in words_now:
+                    if line_num + 1 < len(words_now):
+                        print word['words']+words_now[line_num+1]['words']
+                        real_isbn = find_isbn(word['words']+words_now[line_num+1]['words'])
+                    else:
+                        real_isbn = find_isbn(word['words'])
+                    if real_isbn!=0:
+                        now_isbn = db_conn.query("select isbn from a_workbook_1010_cip where id=" + str(
+                            now_id))
+                        if len(now_isbn[0]['isbn']) == 0:
+                            db_conn.update('a_workbook_1010_cip', {"isbn": real_isbn}, {"id": now_id})
+                        else:
+                            if real_isbn in now_isbn[0]['isbn']:
+                                pass
+                            else:
+                                db_conn.update('a_workbook_1010_cip', {"isbn": now_isbn[0]['isbn'] + '|' + real_isbn},
+                                               {"id": now_id})
+        return True
+    client = AipOcr(APP_ID, API_KEY, SECRET_KEY)
+    image = get_file_content(img_file)
+
+    pic_info = client.basicGeneral(image)
+
+    try:
+        if pic_info['words_result_num']>0:
+            data = {'log_id': pic_info['log_id'], 'words_result_num': pic_info['words_result_num'],'words_result': json.dumps(pic_info['words_result'], encoding="UTF-8"), 'pic_id': now_pic_id,'pic_type':img_type}
+            db_conn.insert('cip_ocr_log',data)
+            for words in pic_info['words_result']:
+                real_isbn = find_isbn(words['words'])
+                if real_isbn != 0:
+                    now_isbn = db_conn.query("select isbn from a_workbook_1010_cip where id=" + str(
+                        now_id))
+                    if len(now_isbn[0]['isbn']) == 0:
+                        db_conn.update('a_workbook_1010_cip', {"isbn": real_isbn}, {"id": now_id})
+                    else:
+                        if real_isbn in now_isbn[0]['isbn']:
+                            pass
+                        else:
+                            db_conn.update('a_workbook_1010_cip', {"isbn": now_isbn[0]['isbn'] + '|' + real_isbn},
+                                           {"id": now_id})
+                    #insert database
+                    return True
+                else:
+                    return False
+    except Exception as e:
+        data = {'log_id': pic_info['log_id'], 'error_code': pic_info['error_code'],
+                'error_msg': pic_info['error_msg'], 'pic_id': now_pic_id,'pic_type':img_type}
+        db_conn.insert('cip_ocr_log', data)
+
+def local_ocr(img_file):
+    now_id = os.path.basename(img_file).split('_')[0]
+    now_cip = os.path.basename(img_file).split('_')[1]
+    img = cv2.imread('./cip/' + img_now, 0)
+    try:
+        text = pytesseract.image_to_string(img)#,lang='chi_sim'
+        with open('./test.txt', 'wb') as fw:
+            fw.write(text.encode('utf-8'))
+        fw.close()
+        with open('./test.txt', 'rb') as fr:
+            for line in fr.readlines():
+                real_isbn = find_isbn(line)
+                if real_isbn != 0:
+                    now_isbn = db_conn.query("select isbn from a_workbook_1010_cip where id=" + str(
+                        now_id))
+                    if len(now_isbn[0]['isbn']) == 0:
+                        db_conn.update('a_workbook_1010_cip', {"isbn": real_isbn}, {"id": now_id})
+                    else:
+                        if real_isbn in now_isbn[0]['isbn']:
+                            pass
+                        else:
+                            db_conn.update('a_workbook_1010_cip', {"isbn": now_isbn[0]['isbn'] + '|' + real_isbn},
+                                           {"id": now_id})
+    except Exception as e:
+        print e
+
+def local_cut(isbn):
+    # for img_template in ['./template_4.png', './template_3.png', './template_2.png', './template.png', './template.png']:
+    for img_template in ['./template_4.png', './template_3.png', './template_2.png', './template.png', './template.png']:
+        try:
+            if os.path.isfile('./cut/' + str(isbn['id']) + '_' + os.path.basename(isbn['cip_photo'])) and baidu_ocr('./cut/' + str(isbn['id']) + '_' + os.path.basename(isbn['cip_photo']),'cut'):
+                continue
+            img1 = cv2.imread(img_template, 0)
+            img2 = cv2.imread('./cip/' + img_now, 0)
+            img3 = cv2.imread(img_template, -1)
+            try:
+                kp_pairs = match_images(img1, img2)
+                if kp_pairs:
+                    draw_matches(img_now, kp_pairs, img1, img2, img3)
+                else:
+                    print "No matches found"
+            except Exception as e:
+                print e
+        except Exception as e:
+            print e
+
+def file_to_database(now_dir):
+    for dirpath,dirnames,fileList in os.walk(now_dir):
+        for img_file in fileList:
+            try:
+                asd4_file = dirpath[12:]+'/'+img_file
+                db_conn.insert('a_workbook_1010_cip',{'cip_photo':asd4_file})
+            except Exception as e:
+                print e
+
+
+###############################################################################
+# Test Main
+###############################################################################
+
+
+
+if __name__ == '__main__':
+    # APP_ID = '9926783'
+    # API_KEY = 'fnYzYdvvxvIyvxg7FC7Xiirn'
+    # SECRET_KEY = 'YlyPBT2zMQCLEOwEspXcLRA2UScAb8Y4'
+    APP_ID = '10929016'
+    API_KEY = 'md4jjjdjwKC6OWN5iwdkTFKR'
+    SECRET_KEY = 'jsNPrC9cUhGKjGdeGKpuZ2VaAu0B4ztu'
+    #github client = AipOcr(
+
+    db_conn = MYSQL('192.168.0.112','life','1234','workbook','utf8')
+
+    #9787544097840
+    #9787556904105
+    #9787556903410
+    # print check_isbn('9787556903410')
+    # exit(0)
+
+
+
+    #'local_ocr','local_cut','baidu_ocr',
+    for methods in ['local_ocr','local_cut','baidu_ocr']:
+        # isbns = db_conn.query("select id,cip_photo from local_cip where is_cover =1 and isbn ='' order by id asc")
+        isbns = db_conn.query("select id,cip_photo from a_workbook_1010_cip where id in(251481,251498) and cip_photo is not null order by id desc")
+        try:
+            for isbn in isbns:
+                isbn['cip_photo'] += '|'
+                if '|' in isbn['cip_photo']:
+                    for now_cip_photo in isbn['cip_photo'].split('|'):
+                        if len(now_cip_photo)>10:
+                            img_now = url_to_image(str(isbn['id']), now_cip_photo)
+                            if methods== 'local_cut':
+                                try:
+                                    local_cut(isbn)
+                                except Exception as e0:
+                                    print e0
+                            elif methods=='local_ocr':
+                                print './cip/' + str(isbn['id']) + '_' + os.path.basename(now_cip_photo)
+                                try:
+                                    local_ocr('./cip/' + str(isbn['id']) + '_' + os.path.basename(now_cip_photo))
+                                except Exception as e1:
+                                    print e1
+                            elif methods=='baidu_ocr':
+                                try:
+                                    baidu_ocr('./cip/' + str(isbn['id']) + '_' + os.path.basename(now_cip_photo),'full')
+                                except Exception as e2:
+                                    print e2
+                            else:
+                                pass
+        except Exception as e:
+            print e
+
+    #local_cut and baidu_ocr

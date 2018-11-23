@@ -1,0 +1,52 @@
+@extends('layouts.backend')
+
+@section('lww_index','active')
+
+
+
+@section('content')
+
+    <section class="content-header">
+        <h1>控制面板</h1>
+        <ol class="breadcrumb">
+            <li><a href="{{ route('backend') }}"><i class="fa fa-dashboard"></i> 主导航</a></li>
+            <li class="active"></li>
+        </ol>
+    </section>
+    <section class="content">
+        <div class="box box-default color-palette-box">
+            <div id="rightContent">
+                <div class="box">
+                    <div class="box-header">
+                        <h3 class="box-title">isbn列表</h3>
+                    </div>
+                    <!-- /.box-header -->
+                    <div class="box-body no-padding">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr>
+                                    <th>isbn</th>
+                                    <th>搜索量</th>
+                                    <th>求助数</th>
+                                    <th>操作</th>
+                                </tr>
+                            @foreach($data as $k=>$v)
+                                <tr>
+                                    <td>{{ $v['isbn'] }}</td>
+                                    <td>{{ $v['searchnum'] }}</td>
+                                    <td>{{ count($v->user_book) }}</td>
+                                    <td><a class="btn btn-primary" href="{{ route('isbn_book_list',$v['isbn']) }}">查看</a></td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- /.box-body -->
+                </div>
+                        {{ $data->links() }}
+
+    </div>
+        </div>
+    </section>
+@endsection
+

@@ -1,0 +1,292 @@
+@extends('layouts.backend')
+
+@section('new_buy_analyze','active')
+
+@push('need_css')
+    <link rel="stylesheet" href="/adminlte/plugins/select2/select2.min.css">
+@endpush
+
+
+@section('content')
+    <section class="content-header">
+        <h1>控制面板</h1>
+        <ol class="breadcrumb">
+            <li><a href="{{ route('backend') }}"><i class="fa fa-dashboard"></i> 主导航</a></li>
+            <li class="active">全书总览</li>
+        </ol>
+    </section>
+    <section class="content">
+    <div class="box box-default color-palette-box">
+        <div class="box-header with-border">
+            <h3 class="box-title"><i class="fa fa-tag"></i> 本地答案整理</h3>
+           <div class="col-md-12">
+                <div class="input-group col-md-6">
+                    {{--<select id="sort_id" class="form-control sort_name click_to">--}}
+                        {{--<option value="{{ cache('all_sort_now')->where("id",$data['sort'])->first()->id }}">--}}
+                            {{--@php--}}
+                                {{--$name=cache('all_sort_now')->where("id",$data['sort'])->first()->name--}}
+                            {{--@endphp--}}
+                            {{--@if($name!='nosort')--}}
+                                {{--{{ $name }}--}}
+                            {{--@else--}}
+                                {{--全部系列--}}
+                            {{--@endif--}}
+                            {{--</option>--}}
+                        {{--<option value="-999">全部系列</option>--}}
+                    {{--</select>--}}
+            <form action="{{route('img_upload_logs')}}" method="post" id="choose_id">
+                    {{ csrf_field() }}
+                </div>
+               {{--<div class="input-group pull-left col-md-3">--}}
+                   {{--<input class="form-control" id="search_word" placeholder="练习册名称" type="text" value="" />--}}
+                   {{--<a class="input-group-addon btn btn-primary" id="search_book_btn">搜索</a>--}}
+               {{--</div>--}}
+
+               {{--<button type="button" class="btn btn-primary" style="margin-left: 20px;" id="AddMark">加入待购买</button>--}}
+               {{--<button type="button" class="btn btn-danger" style="margin-left: 20px;" id="DelMark">作废</button>--}}
+        </div>
+
+        <div class="box-body">
+            <div class="col-md-12">
+                <table class="table table-striped" style="text-align: center">
+                    <tbody>
+                    <tr>
+                        <th style="width:10%"><input type="checkbox" onclick="swapCheck()"/>选择</td></th>
+                        {{--<th style="width:5%">序号</th>--}}
+                        <th style="width:10%">目录</th>
+                        <th style="width:10%">书名</th>
+                        <th style="width:15%">系列</th>
+                        <th style="width:10%">科目</th>
+                        <th style="width:10%">年级</th>
+                        <th style="width:10%">卷册</th>
+                        <th>版本</th>
+                        <th style="width:10%">来源</th>
+                        <th style="width:6%">操作</th>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>
+                            <div class="input-group pull-left col-md-6" style="width:100%">
+                                <select id="sort_sel" style="width:100%" name="sort">
+                                    <option value="">选择</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group pull-left col-md-2" style="width:100%">
+                                <select id="subject_sel" style="width:100%" name="subject">
+                                    <option value="">选择</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group pull-left col-md-2" style="width:100%">
+                                <select id="grade_sel" style="width:100%" name="grade">
+                                    <option value="">选择</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group pull-left col-md-2" style="width:100%">
+                                <select id="volumes_sel" style="width:100%" name="volume">
+                                    <option value="">选择</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group pull-left col-md-3" style="width:100%">
+                                <select id="version_sel" style="width:100%" name="version">
+                                    <option value="">选择</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+
+                        </td>
+                    </tr>
+                    @foreach($data as $k=>$v)
+                        <tr data-oid="{{$v->id}}">
+                            <td><input type="checkbox" class="check"></td>
+                            {{--<td>{{$k+1}}</td>--}}
+                            <td>{{$v->path_name}}</td>
+                            <td>{{$v->bookname}}</td>
+                            <td>{{$v->name}}</td>
+                            <td>
+                                @if($v->preg_subject==1)语文
+                                @elseif($v->preg_subject==2)数学
+                                @elseif($v->preg_subject==3)英语
+                                @elseif($v->preg_subject==4)物理
+                                @elseif($v->preg_subject==5)化学
+                                @elseif($v->preg_subject==6)地理
+                                @elseif($v->preg_subject==7)历史
+                                @elseif($v->preg_subject==8)政治
+                                @elseif($v->preg_subject==9)生物
+                                @elseif($v->preg_subject==10)科学
+                                @elseif($v->preg_subject==11)综合
+                                @endif
+                            </td>
+                            <td>{{$v->preg_grade}}年级</td>
+                            <td>{{$v->volumes}}</td>
+                            <td>{{$v->press_name}}</td>
+                            <td>{{$v->from_id}}</td>
+                            <td>
+                                <button type="button" class="btn btn-danger" style="margin-left: 20px;" id="DelMark">匹配</button>
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+
+            </div>
+            <div>
+                {{ $data->links() }}
+            </div>
+
+        </div>
+    </form>
+    </div>
+    </div>
+    </section>
+@endsection
+
+@push('need_js')
+    <script src="/adminlte/plugins/select2/select2.full.min.js"></script>
+    <script src="/adminlte/plugins/select2/i18n/zh-CN.js"></script>
+    {{--<script>--}}
+        {{--$(function () {--}}
+            {{--//选择系列--}}
+            {{--$(".sort_name").select2({--}}
+                {{--language: "zh-CN",--}}
+                {{--ajax: {--}}
+                    {{--type: 'GET',--}}
+                    {{--url: "{{ route('workbook_sort','sort') }}",--}}
+                    {{--dataType: 'json',--}}
+                    {{--delay: 100,--}}
+                    {{--data: function (params) {--}}
+                        {{--return {--}}
+                            {{--word: params.term, // search term 请求参数--}}
+                        {{--};--}}
+                    {{--},--}}
+                    {{--processResults: function (data) {--}}
+                        {{--return {--}}
+                            {{--results: data.items,//itemList--}}
+                        {{--};--}}
+                    {{--},--}}
+                    {{--cache: true--}}
+                {{--},--}}
+                {{--escapeMarkup: function (markup) {--}}
+                    {{--return markup;--}}
+                {{--}, // 自定义格式化防止xss注入--}}
+                {{--minimumInputLength: 1,//最少输入多少个字符后开始查询--}}
+                {{--templateResult: function formatRepo(repo) {--}}
+                    {{--if (repo.loading) return repo.text;--}}
+                    {{--return '<option value="' + repo.id + '">' + repo.name + '_' + repo.id + '</option>';--}}
+                {{--}, // 函数用来渲染结果--}}
+                {{--templateSelection: function formatRepoSelection(repo) {--}}
+                    {{--//alert(repo.name || repo.text);--}}
+                    {{--return repo.name || repo.text;--}}
+                {{--},--}}
+
+            {{--});--}}
+
+            {{--$('#search_book_btn').click(function () {--}}
+                {{--let sort_id=$('#sort_id').val();--}}
+                {{--let volumes_id = $('#volumes_sel').val();--}}
+                {{--let word = $.trim($('#search_word').val());--}}
+                {{--window.location.href='{{ route('book_list') }}'+'/'+sort_id+'/'+volumes_id+'/'+word;--}}
+            {{--});--}}
+
+
+
+            {{--$('#volumes_sel').val('{{ $data['volumes_id'] }}');--}}
+            {{--$('#search_word').val('{{ $data['word'] }}');--}}
+        {{--})--}}
+    {{--</script>--}}
+
+<script>
+    //checkbox 全选/取消全选
+    var isCheckAll = false;
+    function swapCheck() {
+        if (isCheckAll) {
+            $("input[type='checkbox']").each(function() {
+                this.checked = false;
+            });
+            isCheckAll = false;
+        } else {
+            $("input[type='checkbox']").each(function() {
+                this.checked = true;
+            });
+            isCheckAll = true;
+        }
+    }
+
+    $(function(){
+       $("#AddMark").click(function(){
+           if(confirm('确定要加入待购买吗?')){
+               let checks = $(".check:checked");
+               let checkData = new Array();
+               checks.each(function(){
+                   checkData.push($(this).parents("tr").attr('data-oid'));
+               });
+               axios.post('{{ route('ajax_book_list') }}',{checkData}).then(response=>{
+                   if(response.data.status===1){
+                        window.location.reload();
+                    }
+                });
+
+           }
+       });
+
+        $("#DelMark").click(function(){
+            if(confirm('确定要作废吗?')){
+                let checks = $(".check:checked");
+                let checkData = new Array();
+                checks.each(function(){
+                    checkData.push($(this).parents("tr").attr('data-oid'));
+                });
+                axios.post('{{ route('ajax_book_list') }}',{checkData}).then(response=>{
+                    if(response.data.status===1){
+                        window.location.reload();
+                    }
+                });
+            }
+        });
+
+
+
+        //初始化下拉列表
+        $("#volumes_sel").select2({
+            data:$.parseJSON('{!!$volumes!!}')
+        });
+        $("#version_sel").select2({
+            data:$.parseJSON('{!!$version!!}')
+        });
+        $("#subject_sel").select2({
+            data:$.parseJSON('{!!$subject!!}')
+        });
+        $("#grade_sel").select2({
+            data:$.parseJSON('{!!$grade!!}')
+        });
+        $("#sort_sel").select2({
+            data:$.parseJSON('{!!$sort!!}')
+        });
+        //设置默认值
+        $("#volumes_sel").val(['{!!$r_volume!!}']).trigger('change');
+        $("#version_sel").val(['{!!$r_version!!}']).trigger('change');
+        $("#subject_sel").val(['{!!$r_subject!!}']).trigger('change');
+        $("#grade_sel").val(['{!!$r_grade!!}']).trigger('change');
+        $("#sort_sel").val(['{!!$r_sort!!}']).trigger('change');
+
+
+
+        //select绑定change事件
+        $('select').change(function(){
+            $('#choose_id').submit();
+        });
+    });
+
+
+</script>
+@endpush

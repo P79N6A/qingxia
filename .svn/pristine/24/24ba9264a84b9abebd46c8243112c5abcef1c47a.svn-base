@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Controllers\Mytest;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+
+class TestController extends Controller
+{
+    public function test()
+    {
+        $dir=iconv("UTF-8", "GBK",'D:/test/二/人教金学典同步解析与测评/英语/八年级上册人教版');
+        $todir=iconv("UTF-8", "GBK",'D:/test/二/b');
+//        iconv("UTF-8", "GBK",'D:\test\二\人教金学典同步解析与测评');
+        $data=$this->copyF($dir,$todir);
+        echo $data;
+    }
+
+    public function copyF($dir,$toDir)
+    {
+        foreach (glob($dir."/*") as $val) {
+            if(is_dir($val)){
+                copyF($val,$toDir);
+            }else{
+                $length=strripos($val,"/");
+                $shen=substr($val,$length);
+                $newDir=$toDir.$shen;
+                copy($val,$newDir);
+            }
+        }
+        return 201;
+    }
+}

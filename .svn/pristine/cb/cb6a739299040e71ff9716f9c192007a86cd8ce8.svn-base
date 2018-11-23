@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Http\Controllers\Mytest;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+
+class TestController extends Controller
+{
+    public function test()
+    {
+        $data=DB::table('local_img_upload_logs')->select()->paginate(20);
+        foreach($data as $k=>$v){
+            $v->done=['a','b'];
+        }
+        dd($data);
+    }
+
+}

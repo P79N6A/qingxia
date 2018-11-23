@@ -1,0 +1,593 @@
+@extends('layouts.backend')
+
+@section('new_buy_again','active')
+
+@push('need_css')
+    <link rel="stylesheet" href="/adminlte/plugins/select2/select2.min.css">
+    <style>
+        .check_box_checked{
+            border: 1px solid red;
+        }
+        #found_books_box .img_box{
+            height: 400px;
+        }
+        #found_books_box img{
+            min-width: 150px;
+            max-height: 300px;
+            min-height:300px;
+        }
+        .to_buy_books{
+            cursor: pointer;
+        }
+    </style>
+@endpush
+
+@section('content')
+    @component('components.modal',['id'=>'confirm_new_book'])
+        @slot('title')
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span></button>
+        @endslot
+        @slot('body')
+            <div class="input-group" style="width: 100%">
+                <input class="form-control" type="text" value="" style="width: 70%"/>
+                <select class="select2 input-group-addon" style="width: 30%">
+                    @forelse(cache('all_version_now') as $version)
+                        <option value="{{ $version->id }}">{{ $version->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @endslot
+        @slot('footer')
+            <a class="btn btn-primary" id="confirm_buy">确认购买</a>
+            <a class="btn btn-default" data-dismiss="modal">取消</a>
+        @endslot
+    @endcomponent
+
+    @component('components.modal',['id'=>'confirm_new_only'])
+        @slot('title')
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span></button>
+        @endslot
+        @slot('body')
+            <div class="input-group" style="width: 100%">
+                <input class="form-control" type="text" value="" style="width: 70%"/>
+                <select class="select2 input-group-addon" style="width: 30%">
+                    @forelse(cache('all_version_now') as $version)
+                        <option value="{{ $version->id }}">{{ $version->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @endslot
+        @slot('footer')
+            <a class="btn btn-primary" id="confirm_add_only">确认新增</a>
+            <a class="btn btn-default" data-dismiss="modal">取消</a>
+        @endslot
+    @endcomponent
+
+    @component('components.modal',['id'=>'get_found_books'])
+        @slot('title')
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span></button>
+        @endslot
+        @slot('body')
+            <div id="found_books_box" class="row">
+            </div>
+        @endslot
+        @slot('footer')
+            <a class="btn btn-danger" id="not_found">没有匹配到练习册</a>
+        @endslot
+    @endcomponent
+
+
+    <section class="content-header">
+        <h1>控制面板</h1>
+        <ol class="breadcrumb">
+            <li><a href="{{ route('backend') }}"><i class="fa fa-dashboard"></i> 主导航</a></li>
+            <li class="active">练习册收藏统计</li>
+        </ol>
+    </section>
+    <section class="content">
+        <div class="box box-default color-palette-box">
+            <div class="box-body">
+                <div class="input-group" style="width: 50%">
+                    <select id="sort_id" class="form-control sort_name click_to">
+                        <option value="-999">全部系列</option>
+                    </select>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="input-group" style="width: 100%">
+                            <select id="version_select" class="select2 form-control">
+                                <option value="999">所有版本</option>
+                                @forelse($data['now_all_version'] as $version)
+                                    <option @if(intval($version->version_id)===intval($data['now_version_id'])) selected="selected" @endif value="{{ $version->version_id }}">{{ cache('all_version_now')->where('id',$version->version_id)->first()->name }}</option>
+                                @endforeach
+                            </select>
+                            <select id="grade_select" class="select2 form-control" style="width: 50%">
+                                <option value="0">所有学段</option>
+                                <option value="1">小学</option>
+                                <option value="2">初中</option>
+                                <option value="3">高中</option>
+                            </select>
+                            <select id="subject_select" class="select2 form-control" style="width: 50%">
+                                <option value="0">所有科目</option>
+                                @forelse(config('workbook.subject_1010') as $key=>$value)
+                                    @if($key>0)
+                                    <option value="{{ $key }}">{{ $value }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="old_name_input" />
+                            <input type="text" class="form-control" id="new_name_input"/>
+                            <a class="btn btn-primary input-group-addon" id="change_all_name">更改</a>
+                        </div>
+                    </div>
+                    <div  class="col-md-9">
+                        <h3>
+                            <a class="btn btn-lg btn-primary to_buy_books" target="_blank" data-href="{{ route('taobao_book_simple',[$data['now_sort_name']]) }}">前往购买</a>
+                            <a class="btn btn-lg btn-primary" target="_blank" href="{{ route('new_buy_record',[$data['now_sort_id']]) }}">查看待购买</a>
+                            {{ $data['now_sort_name'] }}
+                            当前路径：\\QINGXIA23\book4_new\{{ $data['now_sort_id'] }}_{{ $data['now_sort_name'] }}/
+                            <a class="btn btn-lg btn-primary" target="_blank" href="{{ route('manage_new_local_test_list',[$data['now_sort_id'],'pending']) }}">前往处理</a>
+                        </h3>
+
+                        <div>
+                            <div class="col-md-6">
+                                <div class="input-group" style="width: 100%">
+                                    <a class="btn btn-primary input-group-addon">包含</a>
+                                    <select class="select2 all_search_name form-control" multiple="multiple" data-type="1">
+                                        @if(isset($data['sort_search_names'][1]))
+                                            @forelse($data['sort_search_names'][1] as $names)
+                                                <option selected value="{{ $names->search_name }}">{{ $names->search_name }}</option>
+                                            @endforeach
+                                        @endif
+                                    </select>
+                                </div>
+                                <div class="input-group" style="width: 100%">
+                                    <input class="form-control" type="text" />
+                                    <a class="input-group-addon btn btn-primary save_search_name" data-type="1">保存</a>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group" style="width: 100%">
+                                    <a class="btn btn-primary input-group-addon">排除</a>
+                                    <select class="select2 all_search_name form-control" multiple="multiple" data-type="2">
+                                        @if(isset($data['sort_search_names'][2]))
+                                            @forelse($data['sort_search_names'][2] as $names)
+                                                <option selected value="{{ $names->search_name }}">{{ $names->search_name }}</option>
+                                            @endforeach
+                                        @endif
+                                    </select>
+                                </div>
+                                <div class="input-group" style="width: 100%">
+                                    <input class="form-control" type="text" />
+                                    <a class="input-group-addon btn btn-primary save_search_name" data-type="2">保存</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-tabs-custom col-md-12">
+                    <div class="nav nav-tabs">
+                        @forelse($data['now_all_version'] as $version)
+                            <li @if($data['now_version_id']==$version->version_id) class="active" @endif><a href="{{ route('new_buy_sort_list',[$data['now_sort_id'],$version->version_id]) }}">{{ $version->hasVersion->name }}<i
+                                        class="badge bg-red">{{ $version->num }}</i></a></li>
+                            @endforeach
+                    </div>
+
+                    <div class="tab-content">
+                        <div class="tab-pane active table-responsive" style="    overflow: scroll;">
+                            <table class="table table-bordered table-hover">
+                                <tr>
+                                    <th>年级/科目</th>
+                                    @forelse(range(1,11) as $subject_id)
+                                        <th>{{ config('workbook.subject_1010')[$subject_id] }}</th>
+                                    @endforeach
+                                </tr>
+                                @inject('get_now_status','\App\Http\Controllers\NewBuy\SortListController')
+                                @forelse(range(3,9) as $grade_id)
+                                    <tr data-version_id="{{ $data['now_version_id'] }}" data-sort_id="{{ $data['now_sort_id'] }}">
+                                        <td>{{ config('workbook.grade')[$grade_id] }}</td>
+                                        @forelse(range(1,11) as $subject_id)
+                                            @if(isset($data['now_only_books'][$grade_id]) && isset($data['now_only_books'][$grade_id][$subject_id]))
+                                                <td data-subject="{{ $subject_id }}" data-grade="{{ $grade_id }}">
+                                                    <div>
+                                                        <a class="hide btn btn-default btn-block add_new_book" data-type="new_name" data-id="99999_{{ $grade_id.'_'.$subject_id }}" data-name="{{ cache('now_bought_params')->where('uid',auth()->id())->first()->version_year.'年'.$data['now_sort_name'].config('workbook.grade')[$grade_id].config('workbook.subject_1010')[$subject_id].config('workbook.volumes')[cache('now_bought_params')->where('uid',auth()->id())->first()->volumes_id].$data['now_version_name'] }}">新增购买</a>
+                                                        <a class="btn btn-default btn-block add_new_only" data-id="99999_{{ $grade_id.'_'.$subject_id }}" data-name="{{ $data['now_sort_name'].config('workbook.grade')[$grade_id].config('workbook.subject_1010')[$subject_id].config('workbook.volumes')[cache('now_bought_params')->where('uid',auth()->id())->first()->volumes_id].$data['now_version_name'] }}">新增分类</a>
+                                                        @if(isset($data['now_only_books'][$grade_id][$subject_id]))
+                                                            <a class="btn btn-block btn-default" target="_blank" href="{{ route('new_buy_only',[$data['now_sort_id'],$grade_id,$subject_id,cache('now_bought_params')->where('uid',auth()->id())->first()->volumes_id,$data['now_version_id']]) }}">查看该分类</a>
+                                                        @endif
+                                                    </div>
+                                                    @forelse($data['now_only_books'][$grade_id][$subject_id] as $books)
+                                                        @php $now_status = $get_now_status->_getStatus($books->id,$books->newname); @endphp
+                                                        <div class="only_book_box" data-id="{{ $books->id }}">
+
+                                                            <p class="checkbox @if($books->need_buy===1) check_box_checked @endif"><label class="checkbox_label">
+                                                                <input name="check_to_buy" @if($books->need_buy===1) checked @endif type="checkbox" value="{{ $books->id }}" />{{ $books->newname }}<em class="badge bg-teal">{{ $books->collect2018+$books->collect2017+$books->collect2016+$books->collect2015+$books->collect2014 }}</em>
+                                                                </label>
+                                                            </p>
+                                                                @if($books->need_buy==1 && $books->has_found_count>0)
+                                                                    <p class="text-center">
+                                                                        <a target="_blank" data-href="{{ route('taobao_getBookList',[$data['now_sort_name'],$subject_id,$grade_id]) }}" class="to_buy_books"><img src="{{ asset('images/found.png') }}" alt="" /></a>
+                                                                    </p>
+                                                                <p class="hide text-center found_books" data-id="{{ $books->id }}">
+                                                                    <a style="cursor: pointer"><img src="{{ asset('images/found.png') }}" alt=""></a></p>
+                                                                @endif
+                                                            <div class="input-group">
+                                                                <a data-status="{{ $now_status }}" class="get_book_status input-group-addon {{ $data['buy_status_id'][$now_status]['color'] }}">{{ $data['buy_status_id'][$now_status]['text'] }}</a>
+                                                                <a class="delete_this_only btn input-group-addon">作废</a>
+
+                                                                @if($now_status==0)
+                                                                    <a class="input-group-addon bg-red disabled add_new_book hide" data-type="old_name" data-id="{{ '99999_'.$books->id }}" data-name="{{ cache('now_bought_params')->where('uid',auth()->id())->first()->version_year.'年'.$books->newname }}">新增购买</a>
+                                                                {{--@elseif($now_status==1)--}}
+                                                                {{--<select class="select2 form-control change_buy_status hide" data-id="{{ $books->id }}">--}}
+                                                                    {{--<option value="-1">改变当前状态</option>--}}
+                                                                    {{--<option value="3">退货</option>--}}
+                                                                    {{--<option value="4">已录</option>--}}
+                                                                {{--</select>--}}
+                                                                {{--@else--}}
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </td>
+                                            @else
+                                                <td><div>
+                                                        <a class="hide btn btn-default btn-block add_new_book" data-type="new_name" data-id="99999_{{ $grade_id.'_'.$subject_id }}" data-name="{{ cache('now_bought_params')->where('uid',auth()->id())->first()->version_year.'年'.$data['now_sort_name'].config('workbook.grade')[$grade_id].config('workbook.subject_1010')[$subject_id].config('workbook.volumes')[cache('now_bought_params')->where('uid',auth()->id())->first()->volumes_id].$data['now_version_name'] }}">新增购买</a>
+                                                        <a class="btn btn-default btn-block add_new_only" data-id="99999_{{ $grade_id.'_'.$subject_id }}" data-name="{{ $data['now_sort_name'].config('workbook.grade')[$grade_id].config('workbook.subject_1010')[$subject_id].config('workbook.volumes')[cache('now_bought_params')->where('uid',auth()->id())->first()->volumes_id].$data['now_version_name'] }}">新增分类</a>
+                                                    </div>
+                                                </td>
+                                            @endif
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </table>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+@endsection
+
+@push('need_js')
+    <script src="/adminlte/plugins/select2/select2.full.min.js"></script>
+    <script src="/adminlte/plugins/select2/i18n/zh-CN.js"></script>
+    <script>
+        $(function () {
+            const sort_id = {{ $data['now_sort_id'] }};
+            const version_id = {{ $data['now_version_id'] }};
+           $('.select2').select2({
+               tags: true,
+           });
+
+            //选择系列
+            $(".sort_name").select2({
+                language: "zh-CN",
+                ajax: {
+                    type: 'GET',
+                    url: "{{ route('workbook_sort','sort') }}",
+                    dataType: 'json',
+                    delay: 100,
+                    data: function (params) {
+                        return {
+                            word: params.term, // search term 请求参数
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.items,//itemList
+                        };
+                    },
+                    cache: true
+                },
+                escapeMarkup: function (markup) {
+                    return markup;
+                }, // 自定义格式化防止xss注入
+                minimumInputLength: 1,//最少输入多少个字符后开始查询
+                templateResult: function formatRepo(repo) {
+                    if (repo.loading) return repo.text;
+                    return '<option value="' + repo.id + '">' + repo.name + '_' + repo.id + '</option>';
+                }, // 函数用来渲染结果
+                templateSelection: function formatRepoSelection(repo) {
+                    //alert(repo.name || repo.text);
+                    return repo.name || repo.text;
+                },
+
+            });
+
+            $(document).on('change','.sort_name',function () {
+                let sort_id = $('.sort_name').val();
+                if (sort_id === '-999') {
+                    return false;
+                }
+                window.open('{{ route('new_buy_sort_list') }}' + '/' + sort_id);
+            });
+
+
+           //新增购买
+            $(document).on('click','.add_new_book',function () {
+               let now_id = $(this).attr('data-id');
+               let now_sort = sort_id;
+               let now_version = version_id;
+               let now_name = $(this).attr('data-name');
+               $('#confirm_new_book select').val(now_version).trigger('change');
+               $('#confirm_new_book input').val(now_name);
+               $('#confirm_buy').attr('data-id',now_id);
+               $('#confirm_new_book').modal('show')
+            });
+
+            //新增分类
+            $(document).on('click','.add_new_only',function () {
+                let now_id = $(this).attr('data-id');
+                let now_version = version_id;
+                let now_name = $(this).attr('data-name');
+                $('#confirm_new_only select').val(now_version).trigger('change');
+                $('#confirm_new_only input').val(now_name);
+                $('#confirm_add_only').attr('data-id',now_id);
+                $('#confirm_new_only').modal('show')
+            });
+
+            $(document).on('click','#confirm_add_only',function () {
+                let now_id = $(this).attr('data-id');
+                let now_sort = sort_id;
+                let now_version = $('#confirm_new_only select').val();
+                if(isNaN(now_version) || now_version<0){
+                    alert('请选择正确版本');return false;
+                }
+                let now_name = $('#confirm_new_only input').val();
+                axios.post('{{ route('ajax_new_buy','add_new_only') }}',{now_id,now_sort,now_version,now_name}).then(response=>{
+                    if(response.data.status===1){
+                        let buy_btn = $(`.add_new_only[data-id=${now_id}]`);
+                        buy_btn.parent().parent().append(`<div class="only_book_box" data-id="${response.data.data.new_only_id}"><p class="checkbox check_box_checked"><label class="checkbox_label"><input checked name="check_to_buy" type="checkbox" value="${response.data.data.new_only_id}">${response.data.data.new_only_newname}<em class="badge bg-teal">0</em></label></p><div class="input-group"><a data-status="0" class="get_book_status input-group-addon bg-red disabled">暂无</a>
+<a class="input-group-addon bg-red disabled add_new_book" data-type="old_name" data-id="99999_${response.data.data.new_only_id}" data-name="{{ cache('now_bought_params')->where('uid',auth()->id())->first()->version_year }}年${response.data.data.new_only_newname}">新增购买</a></div></div>`);
+                    }
+                    $('#confirm_new_only').modal('hide');
+                }).catch(function () {
+                    alert('新增失败,该分类已被废除或系列归属错误');
+                    $('#confirm_new_only').modal('hide');
+                });
+            });
+
+            $(document).on('click','#confirm_buy',function () {
+                let book_name = $('#confirm_new_book input').val();
+                let data_id = $(this).attr('data-id');
+                let now_version_id = $('#confirm_new_book select').val();
+                axios.post('{{ route('ajax_new_buy','confirm_buy') }}',{data_id,book_name,now_version_id,sort_id}).then(response=>{
+
+                    if(response.data.status===1){
+                        let buy_btn = $(`.add_new_book[data-id=${data_id}]`)
+                        let buy_type= buy_btn.attr('data-type');
+                        console.log(buy_type);
+                        if(buy_type==='old_name'){
+                            buy_btn.parent().html(`<a class="input-group-addon bg-yellow disabled get_book_status" data-status="1" target="_blank" href="{{ route('manage_new_local_test_list') }}/${sort_id}/local_dir/${response.data.new_id}">已买</a>
+                            <select class="select2 form-control change_buy_status" data-id="${response.data.only_id}">
+                            <option value="-1">改变当前状态</option>
+                            <option value="3">退货</option>
+                            <option value="4">已录</option>
+                            </select>`);
+                        }else{
+                            buy_btn.parent().after(`<div><p>${response.data.only_name }<em class="badge bg-teal">0</em></p><div class="input-group"><a class="input-group-addon bg-yellow disabled get_book_status" data-status="1" target="_blank" href="{{ route('manage_new_local_test_list') }}/${sort_id}/local_dir/${response.data.new_id}">已买</a>
+                            <select class="select2 form-control change_buy_status" data-id="${response.data.only_id}">
+                            <option value="-1">改变当前状态</option>
+                            <option value="3">退货</option>
+                            <option value="4">已录</option>
+                            </select></div>`)
+                        }
+                        $(`.change_buy_status[data-id=${response.data.only_id}]`).select2();
+                        $('#confirm_new_book').modal('hide');
+                    }
+                }).catch(function () {
+                    alert('新增失败');
+                    $('#confirm_new_book').modal('hide');
+                });
+
+            });
+
+            //更改状态
+            $(document).on('change','.change_buy_status',function () {
+                let now_only_id =  $(this).attr('data-id');
+                let now_status = $(this).val();
+                if(now_status>0){
+                    axios.post('{{ route('ajax_new_buy','change_status') }}',{now_only_id,now_status}).then(response=>{
+                        if(response.data.status===1){
+                            let now_html = $(`.change_buy_status[data-id=${now_only_id}]`).parent();
+                            if(now_status==='3'){
+                                now_html.html(`<a class="input-group-addon bg-yellow-active">退货</a>`)
+                            }else if(now_status==='4'){
+                                now_html.html(`<a class="input-group-addon get_book_status bg-purple disabled" data-status="4">已录</a>`)
+                            }
+                        }
+                    });
+                }
+            });
+
+            //根据状态跳转
+            $(document).on('click','.get_book_status',function () {
+                let now_status = $(this).attr('data-status');
+                let only_id = $(this).parents('.only_book_box').attr('data-id');
+                if($(this).attr('href')===undefined){
+                    axios.post('{{ route('ajax_new_buy','get_status_link') }}',{now_status,only_id}).then(response=>{
+                        if(response.data.status===1){
+                            let now_id = response.data.data.now_id;
+                            let url = '';
+                            if(now_status==='1'){
+                                url = `{{ route('manage_new_local_test_list') }}/${sort_id}/local_dir/${now_id}`
+                            }else if(now_status==='4'){
+                                url = `{{ route('manage_new_local_test_list') }}/${sort_id}/pending/${now_id}`
+                            }else{
+                                url = `http://www.1010jiajiao.com/daan/bookid_${now_id}.html`
+                            }
+                            window.open(url);
+                        }
+                    }).catch();
+                }
+            })
+
+            //更新全部名称和newname
+            $('#change_all_name').click(function () {
+                if(!confirm('此操作会更改当前页面所有练习册名称,确认操作？')){
+                    return false;
+                }
+                let old_name = $('#old_name_input').val();
+                let new_name = $('#new_name_input').val();
+                let version_select = $('#version_select').val();
+                let grade_select = $('#grade_select').val();
+                let subject_select = $('#subject_select').val();
+                if(old_name.length<1){
+                    return false;
+                }
+                axios.post('{{ route('ajax_new_buy','change_all_name') }}',{sort_id,version_select,old_name,new_name,grade_select,subject_select}).then(response=>{
+                    if(response.data.status===1){
+                        window.location.reload();
+                    }else{
+                        alert('更新失败')
+                    }
+                })
+            });
+
+            //标记待买状态
+            $(document).on('click','input[name="check_to_buy"]',function (event) {
+                let only_id = $(this).parents('.only_book_box').attr('data-id');
+                axios.post('{{ route('ajax_new_buy','mark_to_buy') }}',{only_id}).then(response=>{
+                    if(response.data.status===1){
+                        if($(this).parents('.checkbox').hasClass('check_box_checked')){
+                            $(this).parents('.checkbox').removeClass('check_box_checked');
+                        }else{
+                            $(this).parents('.checkbox').addClass('check_box_checked');
+                        }
+                    }else{
+                        $(this).prop('checked',false);
+                        alert(response.data.msg);
+                    }
+                }).catch(function () {
+                })
+            });
+
+            //弹出匹配练习册
+            $(document).on('click','.found_books',function () {
+                let only_id = $(this).attr('data-id');
+                axios.post('{{ route('ajax_new_buy','get_found_books') }}',{only_id}).then(response=>{
+                    if(response.data.status ===1){
+                        let books = response.data.data;
+                        let books_box_html = '';
+                        for(let book of books){
+                            books_box_html += `<div class="col-md-3">
+                                <span>
+                                <a class="btn btn-default" href="https://store.taobao.com/shop/view_shop.htm?user_number_id=${book.shopLink}" target="_blank">店铺名：${book.nick}</a>
+                                <a class="btn btn-xs">价格：${book.view_price}</a>
+                                <a class="btn btn-xs">运费：${book.view_fee}</a></span>
+                                <a class="thumbnail img_box" href="https://item.taobao.com/item.htm?id=${book.detail_url}" target="_blank">
+                                    <h4>${book.title}</h4>
+                                    <img src="${book.pic_url}" alt=""></a>
+                                    `
+                                if(book.status===0){
+                                    books_box_html += `<a class="btn btn-block btn-primary mark_to_found" data-id="${book.id}">确认购买此书</a>`;
+                                }else if(book.status===1){
+                                    books_box_html += `<a class="btn btn-block btn-success disable">已购买此书</a>`
+                                }else{
+                                    books_box_html += `<a class="btn btn-block btn-warning disable">此书已标记不匹配</a>`;
+                                }
+                                books_box_html += `</div>`;
+                        }
+                        $('#found_books_box').html(`${books_box_html}`);
+                        $('#not_found').attr('data-id',only_id);
+                        $('#get_found_books').modal('show');
+                    }
+                }).catch(function () {});
+            });
+
+
+            //新增搜索字
+            $(document).on('click','.save_search_name',function () {
+                let search_name = $(this).prev().val();
+                let search_type = $(this).attr('data-type');
+                if(search_name.length<=1){
+                    return false;
+                }
+                axios.post('{{ route('ajax_new_buy','save_search_name') }}',{sort_id,search_name,search_type}).then(response=>{
+                    if(response.data.status===1){
+                        let newState = new Option(search_name, search_name, true, true);
+                        $(this).parents('.col-md-6').find('select').append(newState).trigger('change');
+                    }
+                }).catch();
+            });
+
+            //移除搜索字
+            $('.all_search_name').on('select2:unselect', function (e) {
+                let data = e.params.data;
+                let search_name = data.text;
+                let search_type = $(this).attr('data-type');
+                axios.post('{{ route('ajax_new_buy','remove_search_name') }}',{sort_id,search_name,search_type}).then(response=>{
+                    if(response.data.status===1){
+                        $(this).find(`option[value=${search_name}]`).remove();
+                    }
+                }).catch();
+            });
+
+            //标记找到练习册无效
+            $(document).on('click','#not_found',function () {
+                let only_id = $(this).attr('data-id');
+                //如果有匹配练习册  返回false
+                if($(`#get_found_books`).find(`a.btn-block.btn-success`).length>0){
+                    alert('已有练习册匹配,操作失败');
+                    return false;
+                }
+                axios.post('{{ route('ajax_new_buy','not_found_all') }}',{only_id}).then(response=>{
+                    if(response.data.status===1){
+                        $('#found_books_box').html('');
+                        $(`.found_books[data-id=${only_id}]`).remove();
+                    }
+                }).catch();
+            });
+
+            //标记匹配练习册
+            $(document).on('click','.mark_to_found',function () {
+                let now_id = $(this).attr('data-id');
+                if($('#get_found_books').find(`a.btn-block.btn-success`).length>0){
+                    alert('已有练习册匹配,操作失败');
+                    return false;
+                }
+
+                axios.post('{{ route('ajax_new_buy','mark_to_found') }}',{now_id}).then(response=>{
+                    if(response.data.status===1){
+                        $(this).removeClass('btn-primary mark_to_found').addClass('btn-success disable').html('已购买此书');
+                    }
+                })
+            })
+
+            //跳转
+            $(document).on('click','.to_buy_books',function () {
+                let all_contains = $('.all_search_name[data-type=1]').val().join('|');
+                if(all_contains.length===0){
+                    all_contains = '{{ $data['now_sort_name'] }}'
+                }
+                let all_out= $('.all_search_name[data-type=2]').val().join('|');
+                let now_url = $(this).attr('data-href')+'/'+all_contains+'/'+all_out;
+                window.open(now_url);
+            });
+
+            //作废onlyname
+            $(document).on('click','.delete_this_only',function () {
+                let box = $(this).parents('.only_book_box');
+                let only_id = box.attr('data-id');
+                if(!confirm('确认废除此类名称')){
+                    return false;
+                }
+                axios.post('{{ route('ajax_new_buy','abolish_only') }}',{only_id}).then(response=>{
+                    if(response.data.status===1){
+                        box.remove();
+                    }
+                })
+            });
+
+        });
+    </script>
+
+@endpush

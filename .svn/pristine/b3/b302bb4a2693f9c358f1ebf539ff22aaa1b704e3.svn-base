@@ -1,0 +1,72 @@
+[SYSTEM]
+TITLE = 一年级（上）
+NAME = 一年级（上）
+SUBTITLE = 目前收录了沪教版、苏教版、人教版、北师大版、语文社的语文，后续将会陆续增加其他版本
+ICON = v/dictate/1a/title.png
+TOPLOGO = ""
+
+PAGE = tape
+BACKURL = ""
+TEMPLATE = cms/templates/extra/v_directory_tape.html
+SECTIONS = 沪教版, 苏教版, 人教版, 北师大版, 语文社
+
+[SECTION_沪教版]
+ID = shanghai
+NAME = 沪教版
+ITEMS = 沪教版
+SUPPORT =
+CLASS   = "v3css_itembook"
+LAZYTYPE = book
+
+[ITEM_沪教版]
+TYPE = 内容
+PATH = tape1a/000001_语文（沪教版）/dictation
+
+[SECTION_苏教版]
+ID = sujiao
+NAME = 苏教版
+ITEMS = 苏教版
+SUPPORT =
+CLASS   = "v3css_itembook"
+LAZYTYPE = book
+
+[ITEM_苏教版]
+TYPE = 内容
+PATH = tape1a/001001_语文（苏教版）/dictation
+
+[SECTION_人教版]
+ID = renjiao
+NAME = 人教版
+ITEMS = 人教版
+SUPPORT =
+CLASS   = "v3css_itembook"
+LAZYTYPE = book
+
+[ITEM_人教版]
+TYPE = 内容
+PATH = tape1a/002001_语文（人教版）/dictation
+
+[SECTION_北师大版]
+ID = beishida
+NAME = 北师大版
+ITEMS = 北师大版
+SUPPORT =
+CLASS   = "v3css_itembook"
+LAZYTYPE = book
+
+[ITEM_北师大版]
+TYPE = 内容
+PATH = tape1a/003001_语文（北师大版）/dictation
+
+[SECTION_语文社]
+ID = yuwenshe
+NAME = 语文社
+ITEMS = 语文社
+SUPPORT =
+CLASS   = "v3css_itembook"
+LAZYTYPE = book
+
+[ITEM_语文社]
+TYPE = 内容
+PATH = '''tape1a/022001_语文（A版）/dictation
+tape1a/022002_语文（S版）/dictation'''

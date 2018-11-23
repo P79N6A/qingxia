@@ -1,0 +1,177 @@
+<?php
+
+namespace App\Http\Controllers\Mytest;
+
+use App\MyModel\Local_img_upload_logs;
+use App\OnLineModel\Sort;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
+class NewController extends Controller
+{
+    //目录列表
+    public function logs(Request $request)
+    {
+        error_reporting(E_ALL ^ E_NOTICE);
+            $where=['local_img_upload_logs.all'=>0];
+//        dd($request->all());
+        if($request->isMethod('post')){
+            $where=[];
+                if(($request->all()['sort'])!=""){
+                    $where['local_img_upload_logs.preg_sort']=($request->all())['sort'];
+            }
+                if((($request->all())['grade'])!=""){
+                    $where['local_img_upload_logs.preg_grade']=($request->all())['grade'];
+            }
+            if((($request->all())['subject'])!=""){
+                    $where['local_img_upload_logs.preg_subject']=($request->all())['subject'];
+            }
+            if(($request->all()['version'])!=""){
+                $where['local_img_upload_logs.preg_version']=($request->all())['version'];
+            }
+            if((($request->all())['volume'])!=""){
+                    $where['local_img_upload_logs.preg_volume']=($request->all())['volume'];
+            }
+            $r_sort=(($request->all())['sort']=="")?"":$request->all()['sort'];
+            if($r_sort!=""){
+                $sort_value=DB::connection('mysql_local')->table('sort')->find($r_sort);
+                $sort_value=$sort_value->name;
+            }else{
+                $sort_value="筛选";
+            }
+            $r_grade=(($request->all())['grade']=="")?"":$request->all()['grade'];
+            $r_subject=(($request->all())['subject']=="")?"":$request->all()['subject'];
+            $r_version=(($request->all())['version']=="")?"":$request->all()['version'];
+            $r_volume=(($request->all())['volume']=="")?"":$request->all()['volume'];
+        }else{
+            $r_sort="";
+            $sort_value="筛选";
+            $r_grade="";
+            $r_subject="";
+            $r_version="";
+            $r_volume="";
+
+        }
+            if(empty($where)){
+                $where=['local_img_upload_logs.all'=>0];
+            }
+//        dd($where);
+        //列表
+        $data=DB::connection('mysql_local')->table('local_img_upload_logs')
+            ->leftJoin('a_workbook_new',[
+                'local_img_upload_logs.preg_sort'=>'a_workbook_new.sort',
+                'local_img_upload_logs.preg_grade'=>'a_workbook_new.grade_id',
+                'local_img_upload_logs.preg_subject'=>'a_workbook_new.subject_id',
+                'local_img_upload_logs.preg_version'=>'a_workbook_new.version_id',
+                'local_img_upload_logs.preg_volume'=>'a_workbook_new.volumes_id',
+            ])
+            ->leftJoin('sort','local_img_upload_logs.preg_sort','=','sort.id')
+            ->leftJoin('book_version_type','local_img_upload_logs.preg_version','=','book_version_type.id')
+            ->where(['movetime'=>null])
+            ->where(['local_img_upload_logs.last_path'=>1])
+//            ->where('a_workbook_new.id','>',1000000)
+            ->where($where)
+            ->where(['no_from_id'=>0])
+            ->select(['local_img_upload_logs.id','local_img_upload_logs.preg_sort','local_img_upload_logs.preg_version','local_img_upload_logs.preg_volume','local_img_upload_logs.preg_sort','local_img_upload_logs.preg_subject','local_img_upload_logs.preg_grade','local_img_upload_logs.path_name','a_workbook_new.bookname','sort.name','book_version_type.name as press_name','a_workbook_new.id as from_id'])
+            ->paginate(20);
+        //处理from_id
+//        dd($data);
+        foreach($data as $key=>$value){
+            if(!is_array($value->from_id)){
+            }
+            $array=[];$name=[];$path=[];
+            foreach($data as $a=>$b){
+                $index=0;
+                if(is_array($b->from_id)){
+                    unset($b);
+                    $index=1;
+                }else{
+                    if($value->path_name==$b->path_name){
+                        $name[]=$b->bookname;
+                        $array[]=$b->from_id;
+                        $path[]=$b->cover;
+
+
+                    }
+                }
+            }
+            if($index==1){
+                unset($value);
+            }else{
+                $value->from_id=$array;
+                $value->box=$name;
+                $value->path=$path;
+            }
+        }
+//        dd($data);
+
+        //卷册目录
+        $volumes=config('workbook.volumes');
+        $arr=[];
+        foreach($volumes as $k=>$v){
+            $arr[]=['id'=>$k,'text'=>$v];
+        }
+        $volumes=$arr;
+        //版本目录
+        $version=Cache::rememberForever('all_version_now',function (){
+            return BookVersionType::all(['id','name']);
+        });
+        $arr=[];
+        foreach($version as $v){
+            $arr[]=['id'=>$v['id'],'text'=>$v['name']];
+        }
+        $version=$arr;
+        //科目目录
+        $subject=config('workbook.subject_1010');
+        $array1=[];
+        foreach($subject as $k=>$v){
+            $array1[]=['id'=>$k,'text'=>$v];
+        }
+        $subject=$array1;
+        //年级目录
+        $array2=[];
+        $grade=config('workbook.grade');
+        foreach($grade as $k=>$v){
+            $array2[]=['id'=>$k,'text'=>$v];
+        }
+        $grade=$array2;
+        //系列目录
+        $sort= Cache::rememberForever('all_sort_now',function (){
+            return Sort::all(['id','name as text']);
+        });
+        $arr=[];
+        foreach($sort as $v){
+            $arr[]=['id'=>$v['id'],'text'=>$v['name']];
+        }
+        $sort=$arr;
+        $volumes=json_encode($volumes);
+        $version=json_encode($version);
+        $subject=json_encode($subject);
+        $grade=json_encode($grade);
+        $sort=json_encode($sort);
+//        $escapers = array("\\", "/", "\"", "\n", "\r", "\t", "\x08", "\x0c");
+//        $replacements = array("\\\\", "\\/", "\\\"", "\\n", "\\r", "\\t", "\\f", "\\b");
+//        $sort = str_replace($escapers, $replacements, $sort);
+        return view('a_book_goods.img_upload_logs',[
+            'data'=>$data,
+            'volumes'=>$volumes,
+            'version'=>$version,
+            'subject'=>$subject,
+            'grade'=>$grade,
+            'sort'=>$sort,
+            'r_volume'=>$r_volume,
+            'r_version'=>$r_version,
+            'r_subject'=>$r_subject,
+            'r_grade'=>$r_grade,
+            'r_sort'=>$r_sort,
+            'sort_value'=>$sort_value,
+        ]);
+    }
+
+
+}

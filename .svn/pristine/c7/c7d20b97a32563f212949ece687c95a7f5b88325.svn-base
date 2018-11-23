@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+    <title>答题</title>
+    <link rel="stylesheet" href="css/weui.css"/>
+    <link rel="stylesheet" href="css/weui.min.css">
+    <link rel="stylesheet" href="css/jquery-weui.css">
+    <link rel="stylesheet" href="css/example.css"/>
+    <link rel="stylesheet" href="css/zijin_teacher.css"/>
+</head>
+<body>
+<div class="weui_tab zijin_tab">
+    <div class="weui_navbar">
+        <a href="pressed_about.html" class="weui_navbar_item zijin_item">
+            <img class="re" src="images/xiaoxi.png" alt=""/>
+            <i>99</i>
+        </a>
+        <div class="weui_navbar_item weui_bar_item_on">
+            全部
+            <p>6672</p>
+        </div>
+        <div class="weui_navbar_item">
+            数学
+            <p>235</p>
+        </div>
+        <div class="weui_navbar_item">
+            语文
+            <p>678</p>
+        </div>
+        <div class="weui_navbar_item">
+            英语
+            <p>67</p>
+        </div>
+    </div>
+    <div class="weui_tab_bd">
+    </div>
+</div>
+<div class="weui_cells weui_cells_access zijin_clelrt">
+    <a href="title_details1.html">
+        <div class="weui_cell">
+            <div class="weui_cell_hd"><img src="images/touxiang.png" alt=""></div>
+            <div class="weui_cell_bd weui_cell_primary">
+                <p class="user_names">学生姓名</p>
+                <p class="time">2016.03.30 19:00</p>
+            </div>
+            <div class="weui_cell_biaoti_homework">六年级 数学</div>
+        </div>
+       <!--  <div class="topic">
+            <i></i>
+            <img src="images/tili.png" alt=""/>
+        </div> -->
+        <div class="topic_tree">
+            <ul>
+                <li>
+                    <div class="item" style="background-image: url(images/tili.png);"> 
+                    </div>
+                </li>
+                <li>
+                    <div class="item" style="background-image: url(images/tili.png);"> 
+                    </div>
+                </li>
+                <li>
+                    <div class="item" style="background-image: url(images/tili.png);">
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <p class="text">題型文字描述題型文字描述題型文字描述題型文字描述</p>
+    </a>
+    <div class="bd answer_input_box">
+        <input type="button" value="开始讲解" onclick="c1()" class="weui_btn_primary answer_input">
+    </div>
+</div>
+
+<div class="weui_cells weui_cells_access zijin_clelrt">
+    <a href="title_details1.html">
+        <div class="weui_cell">
+            <div class="weui_cell_hd"><img src="images/touxiang.png" alt=""></div>
+            <div class="weui_cell_bd weui_cell_primary">
+                <p class="user_names">学生姓名</p>
+                <p class="time">2016.03.30 19:00</p>
+            </div>
+            <div class="weui_cell_biaoti_homework">六年级 数学</div>
+        </div>
+       <!--  <div class="topic">
+            <i></i>
+            <img src="images/tili.png" alt=""/>
+        </div> -->
+        <div class="topic_tree">
+            <ul>
+                <li>
+                    <div class="item" style="background-image: url(images/tili.png);"> 
+                    </div>
+                </li>
+                <li>
+                    <div class="item" style="background-image: url(images/tili.png);"> 
+                    </div>
+                </li>
+                <li>
+                    <div class="item" style="background-image: url(images/tili.png);">
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <p class="text">題型文字描述題型文字描述題型文字描述題型文字描述</p>
+    </a>
+    <div class="bd answer_input_box">
+        <input type="button" value="开始讲解" class="weui_btn_primary answer_input">
+    </div>
+</div>
+    <div class='weui_mask'></div>
+    <div class='weui_dialog'>
+        <div class="clsoe"><i class="weui-icon-cancel"></i></div>
+        <div class='weui_dialog_hd'><span>确定开始解题？</span></div>
+        <div class='weui_dialog_ft'>
+            <a href='javascript:;' class='weui_btn_dialog default'>检查作业</a><a href='answer1.html' class='weui_btn_dialog primary'>开始解题</a>
+        </div>
+    </div>
+<script src="js/jquery-2.1.4.js" type="text/javascript" charset="utf-8"></script>
+<script>
+    $(".answer_input").click(function () {
+        $(".weui_mask").addClass("show");
+        $(".weui_dialog").addClass("zijin_dalog");
+    })
+    $(".clsoe,.weui_mask").click(function () {
+        $(".weui_mask").removeClass("show");
+        $(".weui_dialog").removeClass("zijin_dalog");
+    })
+</script>
+</body>
+
+</html>

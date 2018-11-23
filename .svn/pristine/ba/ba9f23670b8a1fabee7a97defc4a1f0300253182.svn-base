@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Http\Controllers\Mytest\Api;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
+class MoveController extends Controller
+{
+    public function move()
+    {
+        $data=request()->all();
+        //1.获取参数
+        //2.移动文件
+        $old_path="D:/test/1/b";
+        $new_path="D:/test/2/b";
+        fopen()
+        copy($old_path,$new_path);
+        //3.修改数据
+
+        if($data){
+            $code=json_encode(['status'=>'success']);
+        }else{
+            $code=json_encode(['status'=>'failed']);
+        }
+        return $code;
+    }
+}

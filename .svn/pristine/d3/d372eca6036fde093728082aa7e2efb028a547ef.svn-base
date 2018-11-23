@@ -1,0 +1,172 @@
+<?php
+
+namespace App\Http\Controllers\Mytest;
+
+use App\MyModel\A_book_goods;
+use App\MyModel\Local_img_upload_logs;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+class NewController extends Controller
+{
+    //练习册管理测试
+    public function index()
+    {
+        $a_book_goods=new A_book_goods();
+        $data=$a_book_goods->take(10)->get();
+        return view('a_book_goods.a_book_goods',compact('data'));
+    }
+
+    //全书总览测试
+    public function list()
+    {
+        $a_book_goods=new A_book_goods();
+        $data=$a_book_goods->select()->paginate(10);
+        return view('a_book_goods.a_book_list',compact('data'));
+    }
+    
+    //目录列表
+    public function logs(Request $request)
+    {
+            $where=[];
+//        dd($request->all());
+        if($request->isMethod('post')){
+                if(($request->all()['sort'])!=""){
+                    $where['local_img_upload_logs.preg_sort']=($request->all())['sort'];
+            }
+                if((($request->all())['grade'])!=""){
+                    $where['local_img_upload_logs.preg_grade']=($request->all())['grade'];
+            }
+            if((($request->all())['subject'])!=""){
+                    $where['local_img_upload_logs.preg_subject']=($request->all())['subject'];
+            }
+            if(($request->all()['version'])!=""){
+                $where['local_img_upload_logs.preg_version']=($request->all())['version'];
+            }
+            if((($request->all())['volume'])!=""){
+                    $where['local_img_upload_logs.preg_volume']=($request->all())['volume'];
+            }
+            $r_sort=(($request->all())['sort']=="")?"":$request->all()['sort'];
+            $r_grade=(($request->all())['grade']=="")?"":$request->all()['grade'];
+            $r_subject=(($request->all())['subject']=="")?"":$request->all()['subject'];
+            $r_version=(($request->all())['version']=="")?"":$request->all()['version'];
+            $r_volume=(($request->all())['volume']=="")?"":$request->all()['volume'];
+        }else{
+            $r_sort="";
+            $r_grade="";
+            $r_subject="";
+            $r_version="";
+            $r_volume="";
+
+        }
+
+//        dd($where);
+        //列表
+        $data=DB::table('local_img_upload_logs')
+            ->join('a_workbook_1010_new',[
+                'local_img_upload_logs.preg_sort'=>'a_workbook_1010_new.sort',
+                'local_img_upload_logs.preg_grade'=>'a_workbook_1010_new.grade_id',
+                'local_img_upload_logs.preg_subject'=>'a_workbook_1010_new.subject_id',
+                'local_img_upload_logs.preg_version'=>'a_workbook_1010_new.version_id',
+                'local_img_upload_logs.preg_volume'=>'a_workbook_1010_new.volumes_id',
+            ])
+            ->join('sort','local_img_upload_logs.preg_sort','=','sort.id')
+            ->join('book_version_type','local_img_upload_logs.preg_version','=','book_version_type.id')
+            ->join('volumes','local_img_upload_logs.preg_volume','=','volumes.id')
+            ->where(['local_img_upload_logs.done'=>0,'local_img_upload_logs.last_path'=>1])
+            ->where('a_workbook_1010_new.id','>',1000000)
+            ->where($where)
+            ->select(['local_img_upload_logs.id','local_img_upload_logs.preg_sort','local_img_upload_logs.preg_version','local_img_upload_logs.preg_volume','local_img_upload_logs.preg_sort','local_img_upload_logs.preg_subject','local_img_upload_logs.preg_grade','local_img_upload_logs.path_name','a_workbook_1010_new.bookname','sort.name','book_version_type.name as press_name','volumes.volumes','a_workbook_1010_new.from_id'])
+            ->paginate(20);
+        //处理from_id
+
+        foreach($data as $key=>$value){
+            if(!is_array($value->from_id)){
+
+            }
+            $array=[];$name=[];
+            foreach($data as $a=>$b){
+                $index=0;
+                if(is_array($b->from_id)){
+                    unset($b);
+                    $index=1;
+                }else{
+                    if($value->path_name==$b->path_name){
+                        $name[]=$b->bookname;
+                        $array[]=$b->from_id;
+                    }
+                }
+
+            }
+            if($index==1){
+                unset($value);
+            }else{
+                $value->from_id=$array;
+                $value->box=$name;
+            }
+
+            
+        }
+//        dd($data);
+        //筛选最下级目录
+//        foreach($data as $v){
+//            $id=$v['id'];
+//            $result=$logs::where(['parent_id'=>$id])->get();
+//
+//            if($result->isEmpty()){
+//                $res=$logs::where(['id'=>$v['id']])->update(['last_path'=>1]);
+//            }
+//        }
+
+        //卷册目录
+        $volumes=DB::table('volumes')
+            ->select(['id','volumes as text'])
+            ->get();
+        //版本目录
+        $version=DB::table('book_version_type')
+            ->select(['id','name as text'])
+            ->get();
+        //科目目录
+        $subject=config('workbook.subject_1010');
+        $array1=[];
+        foreach($subject as $k=>$v){
+            $array1[]=['id'=>$k,'text'=>$v];
+        }
+        $subject=$array1;
+        //年级目录
+        $array2=[];
+        $grade=config('workbook.grade');
+        foreach($grade as $k=>$v){
+            $array2[]=['id'=>$k,'text'=>$v];
+        }
+        $grade=$array2;
+        //系列目录
+        $sort=DB::table('sort')
+            ->select(['id','name as text'])
+            ->take(1212)
+            ->get();
+        $volumes=json_encode($volumes);
+        $version=json_encode($version);
+        $subject=json_encode($subject);
+        $grade=json_encode($grade);
+        $sort=json_encode($sort);
+//        dd($r_sort);
+        return view('a_book_goods.img_upload_logs',[
+            'data'=>$data,
+            'volumes'=>$volumes,
+            'version'=>$version,
+            'subject'=>$subject,
+            'grade'=>$grade,
+            'sort'=>$sort,
+            'r_volume'=>$r_volume,
+            'r_version'=>$r_version,
+            'r_subject'=>$r_subject,
+            'r_grade'=>$r_grade,
+            'r_sort'=>$r_sort,
+        ]);
+    }
+}

@@ -1,0 +1,13 @@
+<?php
+
+namespace App\LwwModel;
+
+use Illuminate\Database\Eloquent\Model;
+
+class AThreadChapter extends Model
+{
+    protected $connection = 'mysql_05wang';
+    protected $table = 'a_thread_chapter';
+    public $timestamps = false;
+
+}

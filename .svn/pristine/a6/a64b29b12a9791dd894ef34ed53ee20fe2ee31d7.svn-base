@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Controllers\Mytest\Api;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+
+class ChangeController extends Controller
+{
+    public function change(Request $request)
+    {
+        $data=request()->all();
+        $id=$data['id'];
+        unset($data['id']);
+        $where=$data;
+        //更新数据
+        $result=DB::connection('mysql_local')->table('local_img_upload_logs')->where(['id'=>$id])->update($where);
+        //查询新的from_id
+        $res=DB::connection('mysql_local')->table('local_img_upload_logs')
+            ->join('a_workbook_1010_new',[
+                'local_img_upload_logs.preg_sort'=>'a_workbook_1010_new.sort',
+                'local_img_upload_logs.preg_grade'=>'a_workbook_1010_new.grade_id',
+                'local_img_upload_logs.preg_subject'=>'a_workbook_1010_new.subject_id',
+                'local_img_upload_logs.preg_version'=>'a_workbook_1010_new.version_id',
+                'local_img_upload_logs.preg_volume'=>'a_workbook_1010_new.volumes_id',
+            ])
+            ->where($where)
+            ->get();
+
+        if($res->isEmpty()){
+            $code=json_encode(['status'=>'failed','data'=>'']);
+        }else{
+            $data=[];
+            foreach($res as $now){
+                $data[]=['bookname'=>$now->bookname,'from_id'=>$now->from_id,'path'=>$now->cover];
+            }   
+            $code=json_encode(['status'=>'success','data'=>$data]);
+        }
+        return $code;
+    }
+
+
+}

@@ -1,0 +1,417 @@
+<?php
+
+namespace App\Http\Controllers\Ajax;
+
+use App\AWorkbook1010;
+use App\LocalModel\IsbnAll;
+use App\LocalModel\NewBuy\NewAnswerServer;
+use App\LocalModel\TaskUid;
+use App\PreMWorkbookUserGroup;
+use App\PreMWorkbookUser;
+use App\PreMWorkbookAnswerUser;
+use App\WorkbookAnswerRds;
+use Auth;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\LocalModel\NewBuy\NewOnly;
+use App\LocalModel\isbnTemp;
+use App\LocalModel\NewBuy\NewBoughtRecord;
+
+class AjaxAuditController extends Controller
+{
+    public function byIsbn(Request $request,$type)
+    {
+        switch ($type){
+            case 'update_bookinfo': //修改书本信息
+                $newname = $request->book_name;
+                $isbn = $request->isbn;
+                $bookid=intval($request->bookid);
+                if(strpos($newname, '未选择')){
+                    return return_json_err(0,'书名错误');
+                }
+                $grade_id = intval($request->grade_id);
+                $subject_id = intval($request->subject_id);
+                $volumes_id = intval($request->volumes_id);
+                $version_id = intval($request->version_id);
+                $sort_id = intval($request->sort_id);
+                $version_year = intval($request->version_year);
+                $cover = $request->cover;
+                $re=AWorkbook1010::where('id',$bookid)->update([
+                    "newname"=>$newname,
+                    "bookname"=>$version_year.'年'.$newname,
+                    "bookcode"=>md5($version_year.'年'.$newname),
+                    "grade_id"=>$grade_id,
+                    "subject_id"=>$subject_id,
+                    "volumes_id"=>$volumes_id,
+                    "version_id"=>$version_id,
+                    "sort"=>$sort_id,
+                    "version_year"=>$version_year,
+                    "cover"=>$cover,
+                    "addtime"=>date("Y-m-d H:i:s"),
+                    "status"=>14
+                ]);
+
+                if($re){
+                    $re2=NewOnly::where(["book".$version_year=>$bookid])->update([
+                        "newname"=>$newname,
+                        "grade_id"=>$grade_id,
+                        "subject_id"=>$subject_id,
+                        "volumes_id"=>$volumes_id,
+                        "version_id"=>$version_id,
+                        "sort"=>$sort_id,
+                        "version_year"=>$version_year,
+                        "cover"=>$cover,
+                        "updated_at"=>date("Y-m-d H:i:s"),
+                        "status"=>14
+                    ]);
+                }else{
+                    return return_json_err(0,'修改失败');
+                }
+                return return_json($re2);
+                break;
+
+            case 'add_bought_record': //添加到待买
+                $bookid=$request->bookid;
+                $re=AWorkbook1010::where('id',$bookid)->select('newname')->with("has_newonly:newname,id")->first();
+                $only_id=$re->has_newonly->id;
+                $bookinfo=NewOnly::where('id',$only_id)->select()->first();
+                $record=NewBoughtRecord::where('only_id',$only_id)->where(['version_year'=>$bookinfo['version_year']])->first();
+                if(!$record){
+                    NewBoughtRecord::create([
+                        "only_id"=>$only_id,
+                        "grade_id"=>$bookinfo['grade_id'],
+                        "subject_id"=>$bookinfo['subject_id'],
+                        "volumes_id"=>$bookinfo['volumes_id'],
+                        "version_year"=>$bookinfo['version_year'],
+                        "sort"=>$bookinfo['sort'],
+                        "uid"=>auth::id(),
+                        "created_at"=>time(),
+                    ]);
+                }
+                $re2=NewOnly::where('id',$only_id)->update(["need_buy"=>1]);
+                return return_json($re2);
+                break;
+
+
+            case 'has_book':  //标记为已有
+                $isbn=$request->isbn;
+                $re=isbnTemp::where('isbn',$isbn)->update(['uid'=>auth::id(),'op_time'=>time()]);
+                return return_json($re);
+                break;
+            case 'show_only_bookname':
+                /*$grade_id = intval($request->grade_id);
+                $subject_id = intval($request->subject_id);
+                $volumes_id = intval($request->volumes_id);
+                $version_id = intval($request->version_id);*/
+                $sort_id = intval($request->sort_id);
+                $re=NewOnly::where([
+                    /*'grade_id'=>$grade_id,
+                    'subject_id'=>$subject_id,
+                    'volumes_id'=>$volumes_id,
+                    'version_id'=>$version_id,*/
+                    'sort'=>$sort_id
+                ])->select('id','newname')->take(10)->get();
+
+                return return_json($re);
+                break;
+
+            case 'get_final_name':
+                $info = NewOnly::where(['newname'=>$request->new_name])->first();
+                if(!$info){
+                    return return_json_err();
+                }
+                $book_name = $request->new_name;
+                if($info->grade_id!= $request->grade_id && config('workbook.grade')[$request->grade_id]){
+                    $book_name = str_replace(config('workbook.grade'), config('workbook.grade')[$request->grade_id], $book_name);
+                }
+                if($info->subject_id!= $request->subject_id && config('workbook.subject_1010')[$request->subject_id]){
+                    $book_name = str_replace(config('workbook.subject_1010'), config('workbook.subject_1010')[$request->subject_id], $book_name);
+                }
+                if($info->volumes_id!= $request->volumes_id && config('workbook.volumes')[$request->volumes_id]){
+                    $book_name = str_replace(config('workbook.volumes'), config('workbook.volumes')[$request->volumes_id], $book_name);
+                }
+                if($info->version_id==0 || $info->version_id!= $request->version_id){
+                    $all_version = cache('all_version_now')->pluck('name')->toArray();
+                    array_push($all_version,[100=>'人教PEP版']);
+
+                    $version_name = cache('all_version_now')->where('id',$request->version_id)->first();
+                    if($version_name){
+                        $book_name = str_replace(cache('all_version_now')->pluck('name')->toArray(), $version_name->name, $book_name);
+                    }
+                }
+
+                return return_json(['final_name'=>$book_name]);
+
+                break;
+
+            case 'show_offical_book':
+                $isbn = $request->now_isbn;
+                $now_books = AWorkbook1010::where(function($query)use($isbn){
+                    $query->where(['isbn'=>$isbn])->whereIn('status',[1,7,14]);
+                })->select('id','bookname','cover','grade_id','subject_id','volumes_id','version_id','collect_count','version_year','sort')->get();
+
+                return return_json($now_books);
+                break;
+
+            case 'save_bookinfo':
+                $book_name = trim($request->book_name);
+                $isbn = $request->isbn;
+                $temp2_id = $request->temp2_id;
+                $uid=IsbnTemp::where('id',$temp2_id)->select('uid')->first()->uid;
+                if($uid!=0) return return_json_err(0,'此书已被操作');
+
+                if(!preg_match('#^[0-9]{13}$#',$isbn)){
+                    return return_json_err(0,'isbn错误');
+                }
+                $all_id=intval($request->all_id);
+                if($book_name==''){
+                    return return_json_err(0,'书名错误');
+                }
+                $grade_id = intval($request->grade_id);
+                $subject_id = intval($request->subject_id);
+                $volumes_id = intval($request->volumes_id);
+                $version_id = intval($request->version_id);
+                $sort_id = intval($request->sort_id);
+                $version_year = intval($request->version_year);
+                $cover = $request->cover;
+
+                $where['newname'] = $book_name;
+                $where['grade_id'] = $grade_id;
+                $where['subject_id'] = $subject_id;
+                $where['volumes_id'] = $volumes_id;
+                $where['version_id'] = $version_id;
+                $where['sort'] = $sort_id;
+                $where['version_year'] = $version_year;
+
+
+
+                /*if(IsbnAll::where('isbn',$isbn)->update($update)){
+                    PreMWorkbookUserGroup::where('isbn',$isbn)->update(['status'=>1]);
+                    return return_json();
+                }*/
+                $maxid=AWorkbook1010::where('id','<','1000000')->max('id');
+
+                $re=AWorkbook1010::where($where)->get();
+                if(count($re)<1){
+
+                    $where['isbn'] = $isbn;
+                    $where['bookname']=$version_year.'年'.$book_name;
+                    $where['bookcode']=md5($where['bookname']);
+                    $where['cover']=$cover;
+                    $where['status']=14;
+                    $where['newid']=0;
+                    $where['addtime']=date("Y-m-d H:i:s",time());
+                    $where['grade_name']='';
+                    $where['subject_name']='';
+                    $where['volume_name']='';
+                    $where['version_name']='';
+                    $where['sort_name']='';
+                    $where['ssort_id']=0;
+                    $where['id']=$maxid+1;
+                    $bookid=AWorkbook1010::insertGetId($where);
+                    if($bookid){
+                        echo $bookid;
+                        $re2=NewOnly::where('newname',$book_name)->first();
+                        if(!$re2){
+                           /*$only_id=*/NewOnly::insertGetId([
+                                "newname"=>$book_name,
+                                "grade_id"=>$grade_id,
+                                "subject_id"=>$subject_id,
+                                "volumes_id"=>$volumes_id,
+                                "version_id"=>$version_id,
+                                "sort"=>$sort_id,
+                                "isbn"=>$isbn,
+                                "cover"=>$cover,
+                                "version_year"=>$version_year,
+                                "created_at"=>date("Y-m-d H:i:s"),
+                                "book".$version_year=>$bookid,
+                               /*"need_buy"=>1,*/
+                               "status"=>14
+                            ]);
+                           /* $record=NewBoughtRecord::where('only_id',$only_id)->first();
+                            if(!$record){
+                                NewBoughtRecord::create([
+                                    "only_id"=>$only_id,
+                                    "grade_id"=>$grade_id,
+                                    "subject_id"=>$subject_id,
+                                    "volumes_id"=>$volumes_id,
+                                    "version_year"=>$version_year,
+                                    "sort"=>$sort_id,
+                                    "uid"=>auth::id(),
+                                    "created_at"=>time(),
+                                ]);
+                            }*/
+                        }else{
+                            /*$record=NewBoughtRecord::where('only_id',$re2->only_id)->first();
+                            if(!$record){
+                                NewBoughtRecord::create([
+                                    "only_id"=>$re2->only_id,
+                                    "grade_id"=>$grade_id,
+                                    "subject_id"=>$subject_id,
+                                    "volumes_id"=>$volumes_id,
+                                    "version_year"=>$version_year,
+                                    "sort"=>$sort_id,
+                                    "uid"=>auth::id(),
+                                    "created_at"=>time(),
+                                ]);
+                            }*/
+                            $re3=NewOnly::where('newname',$book_name)
+                                ->where('isbn','like','%'.$isbn.'%')
+                                ->select('isbn')
+                                ->first();
+                            if($re3){
+                                NewOnly::where('newnSearch.phpame',$book_name)->update([
+                                    "book".$version_year=>$bookid,
+                                    "status"=>14,
+                                    "isbn"=>$re3->isbn.'|'.$isbn,
+                                    "updated_at"=>date("Y-m-d H:i:s")
+
+                                   /* "need_buy"=>1*/
+                                ]);
+                            }else{
+                                NewOnly::where('newname',$book_name)->update([
+                                    "book".$version_year=>$bookid,
+                                    "status"=>14,
+                                    "isbn"=>$isbn,
+                                    "updated_at"=>date("Y-m-d H:i:s")
+                                   /* "need_buy"=>1*/
+                                ]);
+                            }
+                        }
+                    }elseif($re[0]->isbn!=$isbn){die;
+                        AWorkbook1010::where('id',$re[0]->id)->update([
+                            "status"=>14,
+                            "isbn"=>$re[0]->isbn.'|'.$isbn
+                        ]);
+                    }
+                    //var_dump(AWorkbook1010::create($where));
+                }else{
+
+                    $book=AWorkbook1010::where($where)->select('id')->first();
+                    $bookid=$book->id;
+                    $re2=NewOnly::where('newname',$book_name)->get();
+                    if(count($re2)<1){
+                       /* $only_id=*/NewOnly::insertGetId([
+                            "newname"=>$book_name,
+                            "grade_id"=>$grade_id,
+                            "subject_id"=>$subject_id,
+                            "volumes_id"=>$volumes_id,
+                            "sort"=>$sort_id,
+                            "isbn"=>$isbn,
+                            "cover"=>$cover,
+                            "version_year"=>$version_year,
+                            "book".$version_year=>$bookid,
+                            "created_at"=>date("Y-m-d H:i:s"),
+                            "status"=>14,
+                            /*"need_buy"=>1*/
+                        ]);
+                       /* $record=NewBoughtRecord::where('only_id',$only_id)->first();
+                        if(!$record){
+                            NewBoughtRecord::create([
+                                "only_id"=>$only_id,
+                                "grade_id"=>$grade_id,
+                                "subject_id"=>$subject_id,
+                                "volumes_id"=>$volumes_id,
+                                "version_year"=>$version_year,
+                                "sort"=>$sort_id,
+                                "uid"=>auth::id(),
+                                "created_at"=>time(),
+                            ]);
+                        }*/
+                    }else{
+                        /*$only=NewOnly::where('newname',$book_name)->first();
+                        $record=NewBoughtRecord::where('only_id',$only->id)->first();
+                        if(!$record){
+                            NewBoughtRecord::create([
+                                "only_id"=>$only->id,
+                                "grade_id"=>$grade_id,
+                                "subject_id"=>$subject_id,
+                                "volumes_id"=>$volumes_id,
+                                "version_year"=>$version_year,
+                                "sort"=>$sort_id,
+                                "uid"=>auth::id(),
+                                "created_at"=>time(),
+                            ]);
+                        }*/
+                        $re3=NewOnly::where('newname',$book_name)
+                            ->where('isbn','like','%'.$isbn.'%')
+                            ->select('isbn')
+                            ->first();
+
+                        if(!$re3){
+                            NewOnly::where('newname',$book_name)->update([
+                                "book".$version_year=>$bookid,
+                                "status"=>14,
+                                "isbn"=>$isbn,
+                                "updated_at"=>date("Y-m-d H:i:s")
+                                /*"need_buy"=>1*/
+                            ]);
+                        }else{
+                            NewOnly::where('newname',$book_name)->update([
+                                "book".$version_year=>$bookid,
+                                "status"=>14,
+                                "isbn"=>$re3->isbn.'|'.$isbn,
+                                "updated_at"=>date("Y-m-d H:i:s")
+                                /*"need_buy"=>1*/
+                            ]);
+                        }
+
+                    }
+                }
+
+                if($bookid>0){
+                    $bookid_user_arr=PreMWorkbookUser::where(['isbn'=>$isbn])->select('id')->get();
+                    foreach($bookid_user_arr as $bookid_user){
+                        if($bookid_user->id>10000000){
+                            PreMWorkbookAnswerUser::where(['book_id'=>$bookid_user->id])->update(['book_id'=>$bookid,'ubook_id'=>$bookid_user->id]);
+                        }
+                    }
+                }
+
+                if($all_id>0){
+                    IsbnAll::where('id',$all_id)->update([
+                        "preg_grade_id"=>$grade_id,
+                        "preg_subject_id"=>$subject_id,
+                        "preg_volumes_id"=>$volumes_id,
+                        "preg_version_id"=>$version_id,
+                        "preg_sort_id"=>$sort_id,
+                        "real_bookname"=>$version_year.'年'.$book_name
+                    ]);
+                }
+                IsbnTemp::where('isbn',$isbn)->update([
+                    'version_year'=>$version_year,
+                    'bookname'=>$book_name,
+                    'grade_id'=>$grade_id,
+                    'subject_id'=>$subject_id,
+                    'volumes_id'=>$volumes_id,
+                    'version_id'=>$version_id,
+                    'sort'=>$sort_id,
+                    'cover_photo'=>$cover,
+                    'uid'=>auth::id(),
+                    'op_time'=>time()
+                ]);
+                return return_json();
+                break;
+        }
+    }
+
+    public function repeat_book(Request $request){
+        $book_id = intval($request->book_id);
+        $grade_id = intval($request->grade_id);
+        $subject_id = intval($request->subject_id);
+        $volumes_id = intval($request->volumes_id);
+        $version_id = intval($request->version_id);
+
+        $only_confirm_book = AWorkbook1010::where(['sort'=>0,'book_confirm'=>1,'grade_id'=>$grade_id,'subject_id'=>$subject_id,'volumes_id'=>$volumes_id,'version_id'=>$version_id])->first(['id','bookcode']);
+
+        //$old_book = AWorkbook1010::find($book_id);
+        NewAnswerServer::where('bookid',$only_confirm_book->id)->update(['status'=>3]);
+        if(NewAnswerServer::where('bookid',$book_id)->update(['bookid'=>$only_confirm_book->id,'book'=>$only_confirm_book->bookcode])){
+            AWorkbook1010::where('id',$only_confirm_book->id)->update(['has_change'=>1]);
+            AWorkbook1010::where('id',$book_id)->update(['status'=>12]);
+            TaskUid::create(['type'=>'repeat_books','data'=>$grade_id.'_'.$subject_id.'_'.$volumes_id.'_'.$version_id,'uid'=>Auth::id(),'updated_at'=>date('Y-m-d H:i:s',time())]);
+            return return_json();
+        }
+
+    }
+}

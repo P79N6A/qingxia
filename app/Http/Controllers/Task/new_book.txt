@@ -1,0 +1,31 @@
+0.
+update a_workbook_1010_new set addtime = updated_at
+where id>=1231432 and id<= 1231448
+
+
+1.取答案
+select `uid`, `bookid`, `book`, `chapter_id`, `text`, `textname`, `answer`, `status`, `md5_file`, `tid`, `done`, `addtime`, `oss`, `hdid`, `md5answer` from a_workbook_answer_1010_new where bookid >=1231432 and bookid <= 1231448
+
+!!!!!!!新增newname字段
+
+2.取新书
+
+update `workbook`.`a_workbook_1010_new` set status = 12 where id >=1231432 and id <= 1231448;
+select `id`, `redirect_id`, `bookname`,SUBSTR(bookname,6) as newname, `bookcode`, `bookcode_1010`, `isbn`, `cover`, `cover_photo`, `cover_photo_thumbnail`, `addtype`, `relatedid`, `clicks`, `grade_id`, `subject_id`, `volumes_id`, `version_id`, `version_year`, `fid`, `status`, `done`, `collect_count`, `uid`, `uids`, `press`, `banci`, `yinci`, `des`, `reward_credit`, `need_count`, `addtime`, `oldclicks`, `editable`, `t_status`, `zhuanti`, `oss`, `is_buy`, `sort`, `hdid`, `pingbi`, `index_status`, `onlyname`, `onlyid`, `province`, `stay`, `away`,  `rating_time`, `book_confirm`, `grade_name`, `subject_name`, `volume_name`, `version_name`, `sort_name`, `ssort_id`, `jiexi`, `diandu`, `gendu`, `tingxie`, `cip_photo` from a_workbook_1010_new where id >=1231432 and id <= 1231448;
+update `workbook`.`a_workbook_1010_new` set status = 1 where id >=1231432 and id <= 1231448;
+
+
+
+
+insert a_onlybook
+
+
+select onlyid,bookname,sort as sort_id,ssort_id,grade_id,subject_id,version_id,version_year,cover,isbn from a_workbook_1010 where onlyid not in (select distinct onlyid from a_onlybook ) and onlyid != '0' and onlyid like '0%'
+
+
+线上：
+
+select newname,onlyid,ssort_id from a_workbook_1010 where newname in (select distinct newname as newname from a_workbook_1010 where id >=1231432 and id <= 1231448)
+and onlyid !=0 order by newname asc
+
+ AND (.*?);           AND id >=1231432 and id <= 1231448;

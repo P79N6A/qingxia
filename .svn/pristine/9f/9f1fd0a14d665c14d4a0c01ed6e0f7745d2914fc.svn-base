@@ -1,0 +1,19 @@
+1.更新反馈修改答案
+#select distinct bookid from a_workbook_feedback where `status` = 1
+#select uid,bookid,book,chapter_id,text,textname,answer,status,md5_file,tid,done,addtime,oss,hdid,md5answer from a_workbook_answer_1010 where id>20000000 and bookid in ()
+#select id,text,textname,answer,status,md5_file,tid,done,addtime,oss,hdid,md5answer from a_workbook_answer_1010 where id<20000000 and bookid in ()
+
+23463577
+2.更新相关表
+a_workbook_feedback
+a_workbook_1010
+a_workbook_answer_1010
+hd_book
+hd_book_answer
+
+
+#
+select * from app_course_coupon_log where uid = 11918019;
+select * from pre_m_homework_message where uid = 11918019 and type ='system_coupon';
+select * from pre_common_member where uid = 11918019;
+select * from pre_common_member_profile where uid = 11918019;

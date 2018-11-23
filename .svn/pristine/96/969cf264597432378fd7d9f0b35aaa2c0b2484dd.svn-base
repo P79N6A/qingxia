@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+<title>正在答題</title>
+<link rel="stylesheet" href="css/weui.css" />
+<link rel="stylesheet" href="css/example.css" />
+<link rel="stylesheet" href="css/zijin_teacher.css" />
+</head>
+
+<body>
+<div class="zijin_clelrt_box">
+ <div class="weui_cells weui_cells_access zijin_clelrt zinjin_button">
+			<p class="text">題型文字描述題型文字描述題型文字描述題型文字描述</p>
+			<div class="topic_img">
+				<img src="images/ti1.png" alt="" />
+			</div>
+		</div>
+  <div class="weui_cells weui_cells_access zijin_clelrt">
+    <div class="weui_cell_bd weui_cell_primary zijin_textarea">
+      <textarea class="weui_textarea" placeholder="请简要描述你的回答..." rows="3"></textarea>
+    </div>
+    <div class="zijin_button"> <a><img src="images/tupian.png" alt=""></a> <a><img src="images/yuyin_ni.png" alt=""></a> <a><img src="images/luzhi.png" alt=""></a> </div>
+  </div>
+  <div class="zijin_label">
+    <div class="weui_cells_checkbox zijin_checkbox">
+      <label class="weui_cell weui_check_label" for="s1">
+      <div class="weui_cell_hd">
+        <input type="checkbox" class="weui_check" name="checkbox1" id="s1">
+        <i class="weui_icon_checked"></i> </div>
+      <p>移动到操场</p>
+      </label>
+    </div>
+    <div class="bd spacing zijin_bds"> <a onclick="javascript:c1();" class="weui_btn weui_btn_primary btn_gray">提交答案</a> </div>
+  </div>
+</div>
+<div class="weui_dialog_confirm">
+  <div class="weui_mask"></div>
+  <div class="weui_dialog">
+    <div class="weui_dialog_hd zijin_hd"><span>确认放弃本次答题？<br></span><p><em class="red">15秒</em>后自动放弃！</p></div>
+    <div class="weui_dialog_ft"><a href="javascript:;" class="weui_btn_dialog red" >放弃答题</a><a href="answer3.html" class="weui_btn_dialog primary" >继续答题</a></div>
+  </div>
+</div>
+<script src="js/jquery-2.1.4.js" type="text/javascript" charset="utf-8"></script> 
+<script src="js/weui.js" type="text/javascript" charset="utf-8"></script> 
+<script>
+			function c1() {
+				weui.confirm("<div class='weui_dialog_confirm'><div class='weui_mask'></div><div class='weui_dialog'><div class='weui_dialog_hd zijin_hd'><span>你还没有上传图片</span></div><div class='weui_dialog_ft'><a href='javascript:;'' class='weui_btn_dialog primary' >立即上传</a></div></div></div>");
+			};
+		
+		</script>
+</body>
+</html>

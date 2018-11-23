@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Providers;
+
+use App\BookVersionType;
+use App\LocalModel\NewBuy\NewBoughtParams;
+use App\Sort;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Bootstrap any application services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+      
+        $all_version = Cache::rememberForever('all_version_now',function (){
+            return BookVersionType::all(['id','name']);
+        });
+
+        $all_sort = Cache::rememberForever('all_sort_now',function (){
+            return Sort::all(['id','name']);
+        });
+
+
+        View::share('all_version', $all_version);
+        View::share('all_sort', $all_sort);
+        //View::share('now_bought_params', $now_bought_params);
+        $now_bought_params = Cache::rememberForever('now_bought_params', function (){
+            return NewBoughtParams::where(['type'=>'volumes_year'])->select()->get();
+        });
+//        Schema::defaultStringLength(191);
+    }
+
+    /**
+     * Register any application services.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        //
+    }
+}

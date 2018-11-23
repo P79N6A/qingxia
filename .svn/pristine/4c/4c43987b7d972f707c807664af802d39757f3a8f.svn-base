@@ -1,0 +1,12 @@
+<?php
+
+namespace App\MyModel;
+
+use Illuminate\Database\Eloquent\Model;
+
+class A_book_goods extends Model
+{
+    //
+    protected $table = 'a_book_goods';
+    
+}

@@ -1,0 +1,350 @@
+<?php
+
+namespace App\Http\Controllers\OneLww;
+
+use App\AWorkbook1010Zjb;
+use App\Http\Controllers\OssController;
+use App\OnlineModel\AOnlyBook;
+use App\OneModel\ASort;
+use App\OneModel\ASubSort;
+use App\OneModel\AThreadChapter;
+use App\OneModel\AWorkbook;
+use App\OnlineModel\ATongjiHotBook;
+use App\OnlineModel\AWorkbook1010;
+use App\OnlineModel\Sort;
+use App\User;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+
+class IndexController extends Controller
+{
+
+    protected $request;
+    public function __construct(Request $request)
+    {
+        $this->request = $request;
+    }
+
+
+    public function sort_index($type='important',$order='concern_num',$asc='desc')
+    {
+        $data['type'] = $type;
+        $data['order'] = $order;
+        $data['asc'] = $asc;
+        $data['list'] = Sort::where(function ($query) use($type,$order,$asc){
+           if($type==='lww'){
+               $query->where('thread_id','>',0);
+           } elseif($type==='important'){
+               $query->where('is_important','=',1);
+           }else{
+               $query->where('id','>=',0);
+           }
+        })->select('id','name','concern_num')->orderBy($order,$asc)->paginate(20);
+        return view("one_lww.sort_index",['data'=>$data]);
+    }
+
+
+    //首页
+    public function index($district ='all',$order='id',$asc='asc')
+    {
+        $data['district'] = $district;
+        $data['order'] = $order;
+        $data['asc'] = $asc;
+        $data['list']=ASort::where(['status'=>0])->where(function ($query) use($district){
+            if($district!='all'){
+                return $query->where('province','like','%'.$district.'%');
+            }
+            return $query->where('id','>',0);
+
+        })->select('id','sort','sort_name','numresult','searchnum','visit','province','searchrate')
+            ->orderBy($order,$asc)
+            ->paginate(20);
+
+        return view("one_lww.xilie",['data'=>$data]);
+    }
+
+    public function booklist($onlyid =-1,$ssort_id=-1,$sort_id=-1,$grade_id=-1,$subject_id=-1,$version_id=-1,$order='searchnum')
+    {
+        if(!in_array($order, ['searchnum','rating'],true)){
+            dd('不满足排序规则');
+        }
+        $id_arr=$this->request->id_arr;
+        if($id_arr){
+            $data['list']=AOnlyBook::where('grade_id','<=',9)->whereIn('id',$id_arr)->select('id','onlyid','bookname','thread_id','sort_id','grade_id','subject_id','version_id','ssort_id','ssort_name','version_year','answer_status','own_uid','searchnum','rating','need_upload')
+                ->orderBy('grade_id','asc')->orderBy('subject_id','asc');
+        }else{
+            $condition=[];
+            $condition['status']=1;
+            if($onlyid!=-1){
+                $condition['onlyid']=$onlyid;
+            }else{
+                if($ssort_id>=0) $condition['ssort_id']=$ssort_id;
+                if($sort_id>=0) $condition['sort_id']=$sort_id;
+                if($grade_id>=0) $condition['grade_id']=$grade_id;
+                if($subject_id>=0) $condition['subject_id']=$subject_id;
+                if($version_id>=0) $condition['version_id']=$version_id;
+            }
+
+            $data['original_list']=AOnlyBook::where($condition)->where('grade_id','<=',9)
+                ->select('id','onlyid','thread_id','bookname','grade_id','subject_id','sort_id','version_id','ssort_id','ssort_name','version_year','answer_status','own_uid','searchnum','rating','need_upload')
+                ->orderBy($order,'desc')
+                ->orderBy('grade_id','asc')->orderBy('subject_id','asc')
+                ->paginate(10);
+
+            $oss = new OssController();
+            foreach ($data['original_list'] as $key=>$value){
+
+                $book_path = 'all_book_pages/'.get_bookid_array_path($value->onlyid,'20'.config('workbook.school_year'),config('workbook.now_add_book')['now_volumes'].'/pages/');
+
+                $all_img = $oss->getOssClient()->listObjects('daanpic',['delimiter' => '/', 'prefix' =>$book_path ,'max-keys'=>1000]);
+                $value->uploaded_imgs = count($all_img->getObjectList());
+            }
+
+
+
+//            $data['list'] = $data['original_list']->groupBy(function($item,$key){
+//                return $item->grade_id;
+//            })->transform(function ($item1,$key1){
+//                return $item1->groupBy(function($item2,$key2){
+//                    return $item2->subject_id;
+//                })->sortBy(function ($s_value,$s_key){
+//                    return $s_key;
+//                });
+//            })->sortBy(function ($s_value,$s_key){
+//                return $s_key;
+//            });
+
+        }
+
+//        $data['xilie_arr_original']=ASort::select('id','sort_name','sort')->get();
+//        $data['xilie_arr'] = $data['xilie_arr_original']->groupBy(function ($item,$key){
+//            return $item->sort;
+//        });
+
+
+        //$data['type_arr']=['练习册','检测卷','活页卷','强化拓展卷','测试卷'];
+        $data['type_arr'] = ASubSort::where(['sort_id'=>$sort_id])->select('ssort_id','ssort_name')->get();
+        $data['type_arr'] = $data['type_arr']->unique('ssort_name');
+
+        $data['ssort_id']=$ssort_id;
+
+
+
+        $data['onlyid'] = $onlyid;
+        $data['sort_id']=$sort_id;
+        $data['grade_id']=$grade_id;
+        $data['subject_id']=$subject_id;
+        $data['version_id']=$version_id;
+        $data['all_part_time'] = User::where(['part_time'=>1])->select(['id','name'])->get();
+        $data['order'] = $order;
+        return view("one_lww.booklist",['data'=>$data]);
+
+    }
+
+    public function hotbooklist($ssort_id=-1,$sort_id=-1,$grade_id=-1,$subject_id=-1,$version_id=-1,$order=-1)
+    {
+        $data['order'] = $order;
+        $id_arr=$this->request->id_arr;
+        if($id_arr){
+            //where('grade_id','<=',9)->
+            $data['list']=ATongjiHotBook::whereIn('id',$id_arr)->select('id','bookname','sort','grade_id','subject_id','version_id','ssort_id','description','searchnum','answer_url','hd_status','kd_status','xzz_status','answer_status','has_done','updated_uid','updated_at','answer_url_type')
+                ->orderBy('grade_id','asc')->orderBy('subject_id','asc');
+        }else{
+            $condition=[];
+            //$condition['status']=0;
+            if($ssort_id>=0) $condition['ssort_id']=$ssort_id;
+            if($sort_id>=0) $condition['sort']=$sort_id;
+            if($grade_id>=0) $condition['grade_id']=$grade_id;
+            if($subject_id>=0) $condition['subject_id']=$subject_id;
+            if($version_id>=0) $condition['version_id']=$version_id;
+
+
+            if($data['order']!=-1){
+                $data['list']=ATongjiHotBook::where($condition)
+                    ->select('id','bookname','sort','grade_id','subject_id','version_id','ssort_id','description','searchnum','isbn','has_buy','answer_url','hd_status','kd_status','xzz_status','answer_status','has_done','updated_uid','updated_at','answer_url_type')
+                    ->orderBy('searchnum','desc')
+                    ->paginate(10);
+
+//                $data['list'] = $data['original_list']->groupBy(function($item,$key){
+//                    return $item->grade_id;
+//                })->transform(function ($item1,$key1){
+//                    return $item1->groupBy(function($item2,$key2){
+//                        return $item2->subject_id;
+//                    })->sortBy(function ($s_value,$s_key){
+//                        return $s_key;
+//                    });
+//                })->sortBy(function ($s_value,$s_key){
+//                    return $s_key;
+//                });
+//                dd($data['list']);
+            }else{
+                $data['list']=ATongjiHotBook::where($condition)
+                    ->select('id','bookname','sort','grade_id','subject_id','version_id','ssort_id','description','searchnum','isbn','has_buy','answer_url','hd_status','kd_status','xzz_status','answer_status','has_done','updated_uid','updated_at','answer_url_type')
+                    ->orderBy('grade_id','asc')->orderBy('subject_id','asc')
+                    ->paginate(10);
+
+
+//                $data['list'] = $data['original_list']->groupBy(function($item,$key){
+//                    return $item->grade_id;
+//                })->transform(function ($item1,$key1){
+//                    return $item1->groupBy(function($item2,$key2){
+//                        return $item2->subject_id;
+//                    })->sortBy(function ($s_value,$s_key){
+//                        return $s_key;
+//                    });
+//                })->sortBy(function ($s_value,$s_key){
+//                    return $s_key;
+//                });
+            }
+
+        }
+
+
+
+
+
+//        $data['xilie_arr_original']=ASort::select('id','name as sort_name','sort')->get();
+//        $data['xilie_arr'] = $data['xilie_arr_original']->groupBy(function ($item,$key){
+//            return $item->sort;
+//        });
+
+
+        //$data['type_arr']=['练习册','检测卷','活页卷','强化拓展卷','测试卷'];
+        $data['type_arr'] = ASubSort::where(['sort_id'=>$sort_id])->select('ssort_id','ssort_name')->get();
+        $data['type_arr'] = $data['type_arr']->unique('ssort_name');
+
+        $data['ssort_id']=$ssort_id;
+
+        $data['sort_id']=$sort_id;
+        $data['grade_id']=$grade_id;
+        $data['subject_id']=$subject_id;
+        $data['version_id']=$version_id;
+        $data['all_part_time'] = User::where(['part_time'=>1])->select(['id','name'])->get();
+
+        return view("one_lww.hotbooklist",['data'=>$data]);
+
+    }
+
+
+
+    public function workbook_list($ssort_id=-1,$sort_id=-1,$grade_id=-1,$subject_id=-1,$version_id=-1)
+    {
+
+        //if($ssort_id>=0) $condition['ssort_id']=$ssort_id;
+        $sort_id = intval($sort_id);
+        $data['sort_id'] = $sort_id;
+        $data['ssort_id']= $ssort_id;
+        $now_sort = cache('all_sort_now')->where('id',$sort_id)->first();
+        $data['sort_name'] = $now_sort?$now_sort->name:'';
+        if($grade_id>=0) $condition['grade_id']=$grade_id;
+        if($subject_id>=0) $condition['subject_id']=$subject_id;
+        if($version_id>=0) $condition['version_id']=$version_id;
+
+
+        //$data['only_detail'] = AOnlyBook::where($condition)->first(['onlyid','bookname']);
+        $data['other_likes'] = AOnlyBook::where(['sort_id'=>$sort_id])->where($condition)->select(['onlyid','bookname'])->get();
+        //dd($condition);
+
+        //$condition['status']=0;
+        //$condition['onlyid'] = $onlyid;
+//        if($ssort_id>=0) $condition['ssort_id']=$ssort_id;
+//        if($grade_id>=0) $condition['grade_id']=$grade_id;
+//        if($subject_id>=0) $condition['subject_id']=$subject_id;
+//        if($version_id>=0) $condition['version_id']=$version_id;
+        //$data['onlyid'] = $onlyid;
+        $oss = new OssController();
+        $data['workbook_list']=AWorkbook1010::where(['sort'=>$sort_id])->where($condition)->where([['grade_id','<=',9]])->where(function($query){
+            return $query->where('status',1)->orWhere('status',14);
+        })
+            ->select('id','onlyid','bookname','cover','grade_id','subject_id','sort','version_id','ssort_id','version_year','newname','volumes_id','isbn')->withCount('hasAnswers')->withCount('hasAnswers')->with('hasOnly:onlyid,bookname')
+            ->orderBy('version_year','desc')->orderBy('id','desc')
+            ->paginate(10);
+
+        foreach ($data['workbook_list'] as $key=>$workbook) {
+            $now_anaysis_status = AThreadChapter::where(['onlyid'=>$workbook->onlyid,'year'=>$workbook->version_year,'volume_id'=>$workbook->volumes_id])->select(DB::raw('sum(case when has_jiexi = 0 then 1 else 0 end) not_jiexi_num'),DB::raw('sum(case when has_jiexi = 1 then 1 else 0 end) has_jiexi_num'))->first();
+
+            if($now_anaysis_status){
+                $data['analysis_list'][$key]['has_analysis'] = intval($now_anaysis_status->has_jiexi_num);
+                $data['analysis_list'][$key]['not_analysis'] = intval($now_anaysis_status->not_jiexi_num);
+            }else{
+                $data['analysis_list'][$key]['has_analysis'] = 0;
+                $data['analysis_list'][$key]['not_analysis'] = 0;
+            }
+
+            $book_path  ='all_book_pages/'.get_bookid_array_path($workbook->onlyid,$workbook->version_year,$workbook->volumes_id.'/pages/');
+            $all_img = $oss->getOssClient()->listObjects('daanpic',['delimiter' => '/', 'prefix' =>$book_path ,'max-keys'=>1000]);
+            $workbook->uploaded_imgs = count($all_img->getObjectList());
+            $workbook->has_only = AOnlyBook::where(['onlyid'=>$workbook->onlyid])->first(['onlyid','bookname','bookname05','thread_id']);
+//            dd(AThreadChapter::where(['onlyid'=>$workbook->onlyid,'year'=>$workbook->version_year,'volume_id'=>$workbook->volumes_id])->select(DB::raw('sum(case when has_jiexi = 0 then 1 else 0 end) not_jiexi_num'),DB::raw('sum(case when has_jiexi = 1 then 1 else 0 end) has_jiexi_num'))->toSql());
+
+        }
+
+
+
+//        $data['xilie_arr_original']=ASort::select('id','sort_name','sort')->get();
+//        $data['xilie_arr'] = $data['xilie_arr_original']->groupBy(function ($item,$key){
+//            return $item->sort;
+//        });
+
+
+        //$data['type_arr']=['练习册','检测卷','活页卷','强化拓展卷','测试卷'];
+        //$data['type_arr'] = ASubSort::where(['sort_id'=>$sort_id])->select('ssort_id','ssort_name')->get();
+//        $data['type_arr'] = $data['type_arr']->unique('ssort_name');
+//
+//        $data['ssort_id']=$ssort_id;
+//        //$data['sort_id']=$sort_id;
+//        $data['grade_id']=$grade_id;
+//        $data['subject_id']=$subject_id;
+//        $data['version_id']=$version_id;
+
+
+
+        return view("one_lww.workbook_list",['data'=>$data]);
+
+    }
+
+
+    public function chapter($onlyid,$year=0,$volume_id=1,$bookid=0)
+    {
+        $data['bookid'] = $bookid;
+        make_analysis_dir($onlyid,substr($year, -2),$volume_id);
+        if(strlen($onlyid)!=13){
+            die('onlyid 未分配');
+        }
+
+        $data['year_arr']=AWorkbook::where(['onlyid'=>$onlyid])
+            ->select('version_year')->groupBy('version_year')->get();
+
+        if($year==0){
+            $data['year']=$data['year_arr']->max('version_year');
+        }else{
+            $data['year']=$year;
+        }
+        if(!in_array('2018', $data['year_arr']->pluck('version_year')->toArray())){
+            $data['year_arr']->push(json_decode(json_encode(['version_year'=>'2018'])));
+            $data['year'] = 2018;
+        }
+
+
+        $data['onlyid']=$onlyid;
+        $data['volume_id']=$volume_id;
+
+        $data['only_detail'] = AOnlyBook::where(['onlyid'=>$onlyid])->select(['onlyid','bookname','grade_id','subject_id','version_id'])->get();
+
+
+        //print_r($data);
+        if($this->request->test==1){
+            return view("one_lww.chapter_frame",['data'=>$data]);
+        }else{
+            return view("one_lww.chapter",['data'=>$data]);
+        }
+
+    }
+
+    //Onlybook详情
+//    public function book_detail($onlyid)
+//    {
+//        $book_detail = AOnlyBook::where(['onlyid'=>$onlyid])->select(['bookname','grade_id','subject_id','volume_id','version_id']);
+//    }
+}

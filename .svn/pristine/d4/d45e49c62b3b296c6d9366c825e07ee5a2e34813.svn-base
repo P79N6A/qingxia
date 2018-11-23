@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Http\Controllers\Mytest\Api;
+
+use App\BookVersionType;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+
+class MoveController extends Controller
+{
+    public function move()
+    {
+        $data=request()->all();
+        //1.获取参数
+        $sort=$data['sort'];
+        $sortinfo=DB::table('sort')->find($sort);
+        $sortname=$sortinfo->name;//系列名称
+        $sort_path=$sort."_".$sortname;
+        $subject=$data['subject'];
+        $subjectname=config('workbook.subject_1010')[$subject];//科目名称
+        $grade=$data['grade'];
+        $gradename=config('workbook.grade')[$grade];//年级名称
+        $volume=$data['volume'];
+        $volumename=config('workbook.volumes')[$volume];
+        $version=$data['version'];
+        $id=$data['id'];
+        if(DB::table('local_img_upload_logs')->find($id)->done){
+            return $code=json_encode(['status'=>'olddata']);
+        };
+        $all_version=Cache::rememberForever('all_version_now',function(){
+            return BookVersionType::all('id','name');
+        });
+        foreach($all_version as $v){
+            if($v['id']==$version){
+                $versionname=$v['name'];//版本名称
+            }
+        }
+        if(empty($data['from_id'])){
+            return $code=json_encode(['status'=>'nodata']);
+        }
+        $from_id=$data['from_id'];
+        $bookname=$data['bookname'];
+        $fromname=$bookname."_".$from_id;
+        $path='\\\\QINGXIA23/book';
+        $topath='\\\\QINGXIA23/book4_new';
+
+        //2.移动文件
+        $dir= iconv("UTF-8", "GBK", $path."/".$sortname."/".$subjectname."/".$gradename.$volumename.$versionname);
+        $toDir=iconv("UTF-8", "GBK", $topath."/".$sort_path."/".$fromname."/pages");
+        //创建目录
+        $cdir = iconv("UTF-8", "GBK", $topath."/".$sort_path."/".$fromname."/pages");
+        if (!file_exists($cdir)){
+            mkdir ($cdir);
+        }
+        $this->copyF($dir,$toDir);
+        //3.修改数据
+
+        $time=date('Y-m-d H:i:s',time());
+//        dd($time);
+        DB::table('local_img_upload_logs')->where(['id'=>$id])->update(['done'=>1,'movetime'=>$time]);
+        if($data){
+            $code=json_encode(['status'=>'success']);
+        }else{
+            $code=json_encode(['status'=>'failed']);
+        }
+        return $code;
+    }
+
+    //移动文件
+    public function copyF($dir,$toDir)
+    {
+        foreach (glob($dir."/*") as $val) {
+            if(is_dir($val)){
+                copyF($val,$toDir);
+            }else{
+                $length=strripos($val,"/");
+                $shen=substr($val,$length);
+                $newDir=$toDir.$shen;
+                copy($val,$newDir);
+            }
+        }
+    }
+}

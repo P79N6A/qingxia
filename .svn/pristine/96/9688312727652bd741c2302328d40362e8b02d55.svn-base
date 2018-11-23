@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Http\Controllers\Mytest\Api;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+
+class ChangeController extends Controller
+{
+    public function change(Request $request)
+    {
+        $data=request()->all();
+        $where=[$data['key']=>$data['index']];
+        $id=$data['id'];
+        $result=DB::table('local_img_upload_logs')->where(['id'=>$id])->update($where);
+        if($result){
+            $code=json_encode(['status'=>'success']);
+        }else{
+            $code=json_encode(['status'=>'failed']);
+        }
+        return $code;
+    }
+
+
+}

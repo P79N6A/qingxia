@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Http\Controllers\Mytest;
+
+use App\MyModel\A_book_goods;
+use App\MyModel\Local_img_upload_logs;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
+class NewController extends Controller
+{
+    //练习册管理测试
+    public function index()
+    {
+        $a_book_goods=new A_book_goods();
+        $data=$a_book_goods->take(10)->get();
+        return view('a_book_goods.a_book_goods',compact('data'));
+    }
+
+    //全书总览测试
+    public function list()
+    {
+        $a_book_goods=new A_book_goods();
+        $data=$a_book_goods->select()->paginate(10);
+        return view('a_book_goods.a_book_list',compact('data'));
+    }
+    
+    //图片上传日志
+    public function logs()
+    {
+        $logs=new Local_img_upload_logs();
+        $data=$logs::where(['done'=>0])->select()->paginate(20);
+        return view('a_book_goods.img_upload_logs',compact('data'));
+    }
+}

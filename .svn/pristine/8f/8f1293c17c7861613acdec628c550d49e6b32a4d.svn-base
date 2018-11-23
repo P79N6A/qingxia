@@ -1,0 +1,20 @@
+/*可以在这里添加你自己的css*/
+span.fill-in {
+    margin:0 0.2em 0 0;
+    padding:0 1em 0.15em;
+    border:0;
+    border-bottom:1px solid red;
+}
+span.paren {
+    background:#E6F3E1;
+    padding:0 1.2em;
+    border:0;
+}
+span.answer_now{
+    background: #f3534d;
+    padding:0 0.5em;
+    border: 0;
+}
+td{
+    border: solid grey 1px;
+}

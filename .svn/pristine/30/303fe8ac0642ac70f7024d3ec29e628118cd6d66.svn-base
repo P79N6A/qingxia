@@ -1,0 +1,29 @@
+<?php
+
+namespace App\OnlineModel;
+
+use Illuminate\Database\Eloquent\Model;
+
+class AWorkbook1010 extends Model
+{
+    public $connection = 'mysql_main_rds';
+    protected $table = 'a_workbook_1010';
+    public $timestamps = false;
+    protected $guarded = array();
+
+
+    public function hasOnly()
+    {
+        return $this->hasOne('App\OnlineModel\AOnlyBook','onlyid','onlyid');
+    }
+
+    public function hasAnswers()
+    {
+        return $this->hasMany('App\OnlineModel\AWorkbookAnswer','bookid','id')->orderBy('text','asc');
+    }
+
+    public function hasSort()
+    {
+        return $this->hasOne('App\OnlineModel\Sort','id','sort');
+    }
+}
